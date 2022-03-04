@@ -58,8 +58,8 @@ def start_menu(player_id: int) -> str:
     return f'Тебя зовут <b>{user["name"]}</b>\n\n' \
            'Твои текущие настройки:\n\n' + get_applies(player_id=player_id)\
            + f"\n\nВид карт: <b>{mongo_users.find_one({'_id': player_id})['settings']['card-view']}</b>" \
-             f'\nТекущая комната: <b>{game_title}</b>' \
-             f'\nФокус-мод: <b>{focus_mode}</b>\n'\
+             f'\nФокус-мод: <b>{focus_mode}</b>\n' \
+             f'\nТекущая комната: <b>{game_title}</b>\n'\
            + '\nЧто будем менять?'
 
 
