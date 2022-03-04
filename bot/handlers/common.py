@@ -132,8 +132,8 @@ async def notes_card(call: types.CallbackQuery):
                     )
         case 5:
             await call.message.edit_text(text='Напиши мне, что туда вписать.')
-            mongo_users.update_one({'_id': user['_id']}, {'$set':
-                                                              {'note': [room_id, data[2], int(data[3]), int(data[4])]}})
+            mongo_users.update_one({'_id': user['_id']}, {'$set': {
+                'note': [room_id, data[2], int(data[3]), int(data[4])]}})
             await Note.input_note.set()
 
 
