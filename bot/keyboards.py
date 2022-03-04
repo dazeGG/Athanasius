@@ -60,7 +60,7 @@ def leader_game_menu(game: {}, user_id: int) -> types.InlineKeyboardMarkup:
 
 def leader_configuration_menu(game_id: int) -> types.InlineKeyboardMarkup:
     return make_menu(
-        ['Число колод', 'Число рук', 'Тип колоды', 'Название игры', 'Удалить игроков', 'Добавить игроков', 'Назад'],
+        ['Число колод', 'Число рук', 'Тип колоды', 'Название комнаты', 'Удалить игроков', 'Добавить игроков', 'Назад'],
         [f'leader_configure_{game_id}_' + i for i in ['count', 'hands', 'type', 'title', 'delete', 'add', 'back']]
     )
 
