@@ -73,26 +73,30 @@ async def whose_turn(message: types.Message):
 
 async def athanasias_list(message: types.Message):
     await message.delete()
-    game = mongo_games.find_one(
-        {'_id': mongo_users.find_one({'_id': message.from_user.id})['settings']['chosen-room']})
-    if game['active']:
-        message_to_out = ''
-        has_someone_athanasius = False
+    try:
+        game = mongo_games.find_one(
+            {'_id': mongo_users.find_one({'_id': message.from_user.id})['settings']['chosen-room']})
+        if game['active']:
+            message_to_out = ''
+            has_someone_athanasius = False
 
-        for player_id in game['athanasias'].keys():
-            if len(game['athanasias'][player_id]) != 0:
-                has_someone_athanasius = True
-
-        if has_someone_athanasius:
             for player_id in game['athanasias'].keys():
-                user_name = mongo_users.find_one({'_id': int(player_id)})['name']
-                message_to_out += f'<b>{user_name}'
-                for card in game['athanasias'][player_id]:
-                    message_to_out += ' | ' + sc.change(card)
-                message_to_out += '</b>\n\n'
-        else:
-            message_to_out = 'Пока что <b>ни у кого</b> нет Афанасиев)'
-        await message.answer(message_to_out)
+                if len(game['athanasias'][player_id]) != 0:
+                    has_someone_athanasius = True
+
+            if has_someone_athanasius:
+                for player_id in game['athanasias'].keys():
+                    user_name = mongo_users.find_one({'_id': int(player_id)})['name']
+                    message_to_out += f'<b>{user_name}'
+                    for card in game['athanasias'][player_id]:
+                        message_to_out += ' | ' + sc.change(card)
+                    message_to_out += '</b>\n\n'
+            else:
+                message_to_out = 'Пока что <b>ни у кого</b> нет Афанасиев)'
+            await message.answer(message_to_out)
+    except TypeError:
+        await message.answer('Что-то пошло не так...\n'
+                             'Возможно ты не выбрал комнату в настройках, <b>обязательно</b> проверь.')
 
 
 async def add_player(message: types.Message):
