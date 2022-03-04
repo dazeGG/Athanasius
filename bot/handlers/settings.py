@@ -191,7 +191,10 @@ async def settings(call: types.CallbackQuery):
             mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
             await call.message.edit_text(start_menu(call.message.chat.id), reply_markup=k.settings_menu())
         case 'exit':
-            await call.message.edit_text('Удачи!')
+            try:
+                await call.message.edit_text('Удачи!')
+            except MessageNotModified:
+                pass
     await call.answer()
 
 
