@@ -411,7 +411,7 @@ def list_of_players(players_ids: []) -> str:
     players = collection.users.find({'_id': {'$in': players_ids}})
     message_to_out = ''
     for player_index, player in enumerate(players, 1):
-        message_to_out += f'\n<b>{player_index}. {player["name"]}</b> @{player["tg"]}'
+        message_to_out += f'\n<b>{player_index}. {player["name"]}</b>'
     return message_to_out
 
 

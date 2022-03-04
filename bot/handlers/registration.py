@@ -23,7 +23,7 @@ async def registration(message: types.Message, state: FSMContext):
         return
 
     if collection.users.find_one({'name': message.text}) is not None:
-        await message.answer(f"Введи другое имя, имя <b>{message.text}</b> уже занято")
+        await message.answer(f"Введи другое имя, имя **{message.text}** уже занято")
         return
 
     collection.users.insert_one({
