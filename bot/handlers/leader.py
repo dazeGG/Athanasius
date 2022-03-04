@@ -54,12 +54,12 @@ async def start_menu(call: types.CallbackQuery):
 
 
 async def input_game_title(message: types.Message, state: FSMContext):
-    game_id = sc.set_new_game_id()
+    room_id = sc.set_new_game_id()
     games = mongo_users.find_one({'_id': message.from_user.id})['games']
-    games.append(game_id)
+    games.append(room_id)
     mongo_users.update_one({'_id': message.from_user.id}, {'$set': {'games': games}})
     mongo_games.insert_one({
-        '_id': game_id,
+        '_id': room_id,
         'title': message.text,
         'active': False,
         'code-to-add': sc.generate_code_to_add(),
@@ -123,6 +123,7 @@ async def game(call: types.CallbackQuery):
                     await call.message.delete()
 
                     sc.card_distributor(room)
+                    sc.make_notes(room)
                     sc.shuffle_players(room)
 
                     mongo_games.update_one({'_id': room_id}, {'$set': {'active': True}})
