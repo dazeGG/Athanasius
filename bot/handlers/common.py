@@ -66,7 +66,7 @@ async def whose_turn(message: types.Message):
         {'_id': mongo_users.find_one({'_id': message.from_user.id})['settings']['chosen-room']})
     user_whose_turn_name = mongo_users.find_one({'_id': game['queue'][0]})['name']
     if game['active']:
-        await message.answer(f'Ход игрока **{user_whose_turn_name}**')
+        await message.answer(f'Ход игрока <b>{user_whose_turn_name}</b>')
     else:
         await message.answer(f'Ход найти не удалось. Посмотри в настройках ту ли комнату ты выбрал.')
 
@@ -86,12 +86,12 @@ async def athanasias_list(message: types.Message):
         if has_someone_athanasius:
             for player_id in game['athanasias'].keys():
                 user_name = mongo_users.find_one({'_id': int(player_id)})['name']
-                message_to_out += f'**{user_name}'
+                message_to_out += f'<b>{user_name}'
                 for card in game['athanasias'][player_id]:
                     message_to_out += ' | ' + sc.change(card)
-                message_to_out += '**\n\n'
+                message_to_out += '</b>\n\n'
         else:
-            message_to_out = 'Пока что **ни у кого** нет Афанасиев)'
+            message_to_out = 'Пока что <b>ни у кого</b> нет Афанасиев)'
         await message.answer(message_to_out)
 
 
@@ -106,13 +106,13 @@ async def add_player(message: types.Message):
             mongo_users.update_one({'_id': user['_id']}, {'$set': {'games': user['games']}})
 
             for player_id in game['players-ids']:
-                await bot.send_message(player_id, f'У нас новый игрок! Его зовут **{user["name"]}**.')
+                await bot.send_message(player_id, f'У нас новый игрок! Его зовут <b>{user["name"]}</b>.')
 
             game['players-ids'].append(message.from_user.id)
 
             mongo_games.update_one({'_id': game['_id']}, {'$set': {'players-ids': game['players-ids']}})
 
-            await message.answer(f'Успешно добавил тебя в игру **{game["title"]}**.')
+            await message.answer(f'Успешно добавил тебя в игру <b>{game["title"]}</b>.')
             return
 
 

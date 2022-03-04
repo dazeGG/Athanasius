@@ -18,7 +18,7 @@ def delete_chosen(game: {}):
 
 
 def get_p(player: {}) -> str:
-    return f'Игрок: **{player["name"]}**\n'
+    return f'Игрок: <b>{player["name"]}</b>\n'
 
 
 def get_pc(player: {}, chosen: {}) -> str:
@@ -26,11 +26,11 @@ def get_pc(player: {}, chosen: {}) -> str:
 
 
 def get_pcc(player: {}, chosen: {}) -> str:
-    return get_pc(player, chosen) + f'Количество: **{chosen["count"]}**\n'
+    return get_pc(player, chosen) + f'Количество: <b>{chosen["count"]}</b>\n'
 
 
 def get_pccr(player: {}, chosen: {}) -> str:
-    return get_pcc(player, chosen) + f'Красных: **{chosen["count-red"]}**\n'
+    return get_pcc(player, chosen) + f'Красных: <b>{chosen["count-red"]}</b>\n'
 
 
 async def choose_player(call: types.CallbackQuery):
@@ -89,7 +89,7 @@ async def card(call: types.CallbackQuery):
             text=get_pc(
                 asked_user,
                 game['chosen']
-            ) + f'\nКак думаешь, сколько их?\n\nКоличество: **{game["chosen"]["count"]}**',
+            ) + f'\nКак думаешь, сколько их?\n\nКоличество: <b>{game["chosen"]["count"]}</b>',
             reply_markup=k.make_counter(callback=f'cardsCount_{game_id}')
         )
     else:
@@ -99,7 +99,7 @@ async def card(call: types.CallbackQuery):
             await call.message.edit_text(
                 'Не смог удалить это сообщение, поэтому ты видишь этот текст.\n'
                 'Не пугайся, ничего не сломалось, просто ты ходил больше дня)')
-        await sc.message_to_all(game, user, asked_user, 'Их **нет**)')
+        await sc.message_to_all(game, user, asked_user, 'Их <b>нет</b>)')
         sc.change_player(game)
         await sc.turn(game)
         delete_chosen(game)
@@ -117,7 +117,7 @@ async def cards_count(call: types.CallbackQuery):
         case 'no':
             await call.message.edit_text(
                 text=get_pc(asked_user, game['chosen']) + f'\nКак думаешь, сколько их?\n\n'
-                                                          f'Количество: **{game["chosen"]["count"]}**',
+                                                          f'Количество: <b>{game["chosen"]["count"]}</b>',
                 reply_markup=k.make_counter(callback=f'cardsCount_{game_id}')
             )
             await call.answer()
@@ -135,7 +135,7 @@ async def cards_count(call: types.CallbackQuery):
                 game["chosen"]["count"] += int(data[2])
                 await call.message.edit_text(
                     f'{get_pc(asked_user, game["chosen"])}\nКак думаешь, сколько их?\n\n'
-                    f'Количество: **{game["chosen"]["count"]}**',
+                    f'Количество: <b>{game["chosen"]["count"]}</b>',
                     reply_markup=k.make_counter(callback=f'cardsCount_{game_id}')
                 )
                 mongo_games.update_one({'_id': game['_id']}, {'$set': {'chosen': game["chosen"]}})
@@ -144,7 +144,7 @@ async def cards_count(call: types.CallbackQuery):
     if sc.find_cards(game, count=True):
         await call.message.edit_text(
             text=get_pcc(asked_user, game['chosen']) + f'\nКак думаешь, сколько из них красных?\n\n'
-                                                       f'Количество красных: **{game["chosen"]["count-red"]}**',
+                                                       f'Количество красных: <b>{game["chosen"]["count-red"]}</b>',
             reply_markup=k.make_counter(callback=f'cardsRed_{game_id}')
         )
     else:
@@ -158,7 +158,7 @@ async def cards_count(call: types.CallbackQuery):
             game,
             user,
             asked_user,
-            f'Их не **{game["chosen"]["count"]}**.'
+            f'Их не <b>{game["chosen"]["count"]}</b>.'
         )
         sc.change_player(game)
         await sc.turn(game)
@@ -177,7 +177,7 @@ async def cards_red(call: types.CallbackQuery):
         case 'no':
             await call.message.edit_text(
                 text=get_pcc(asked_user, game['chosen']) + f'\nКак думаешь, сколько из них красных?\n\n'
-                                                           f'Количество красных: **{game["chosen"]["count-red"]}**',
+                                                           f'Количество красных: <b>{game["chosen"]["count-red"]}</b>',
                 reply_markup=k.make_counter(callback=f'cardsRed_{game_id}')
             )
             await call.answer()
@@ -195,7 +195,7 @@ async def cards_red(call: types.CallbackQuery):
                 game['chosen']['count-red'] += int(data[2])
                 await call.message.edit_text(
                     f'{get_pcc(asked_user, game["chosen"])}\nКак думаешь, сколько из них красных?\n\n'
-                    f'Количество красных: **{game["chosen"]["count-red"]}**',
+                    f'Количество красных: <b>{game["chosen"]["count-red"]}</b>',
                     reply_markup=k.make_counter(callback=f'cardsRed_{game_id}')
                 )
                 mongo_games.update_one({'_id': game['_id']}, {'$set': {'chosen': game['chosen']}})
@@ -218,7 +218,7 @@ async def cards_red(call: types.CallbackQuery):
                 game,
                 user,
                 asked_user,
-                f'**Выкинул**. Они {sc.jokers(game["chosen"]["count"], game["chosen"]["count-red"])}'
+                f'<b>Выкинул</b>. Они {sc.jokers(game["chosen"]["count"], game["chosen"]["count-red"])}'
             )
             if sc.end_check(game):
                 await sc.end_message(game)
@@ -232,7 +232,7 @@ async def cards_red(call: types.CallbackQuery):
         else:
             await call.message.edit_text(
                 text=get_pccr(asked_user, game['chosen']) + f'\nХорошо, осталось угадать масти:\n\n'
-                                                            f'♥: **0**    ♦: **0**    ♠: **0**    ♣: **0**',
+                                                            f'♥: <b>0</b>    ♦: <b>0</b>    ♠: <b>0</b>    ♣: <b>0</b>',
                 reply_markup=k.choose_suits(game_id)
             )
     else:
@@ -246,7 +246,7 @@ async def cards_red(call: types.CallbackQuery):
             game,
             user,
             asked_user,
-            f'Их **{game["chosen"]["count"]}**, красных не **{game["chosen"]["count-red"]}**.'
+            f'Их <b>{game["chosen"]["count"]}</b>, красных не <b>{game["chosen"]["count-red"]}</b>.'
         )
         sc.change_player(game)
         delete_chosen(game)
@@ -282,10 +282,10 @@ async def suits(call: types.CallbackQuery):
         case 'no':
             await call.message.edit_text(
                 text=get_pccr(asked_user, game['chosen']) + f'\nХорошо, осталось угадать масти:\n\n'
-                                                            f'♥: **{game["chosen"]["suits"]["Червы"]}**    '
-                                                            f'♦: **{game["chosen"]["suits"]["Буби"]}**    '
-                                                            f'♠: **{game["chosen"]["suits"]["Пики"]}**    '
-                                                            f'♣: **{game["chosen"]["suits"]["Крести"]}**',
+                                                            f'♥: <b>{game["chosen"]["suits"]["Червы"]}</b>    '
+                                                            f'♦: <b>{game["chosen"]["suits"]["Буби"]}</b>    '
+                                                            f'♠: <b>{game["chosen"]["suits"]["Пики"]}</b>    '
+                                                            f'♣: <b>{game["chosen"]["suits"]["Крести"]}</b>',
                 reply_markup=k.choose_suits(game_id)
             )
             await call.answer()
@@ -294,10 +294,10 @@ async def suits(call: types.CallbackQuery):
             if user['settings']['applies']['suits']:
                 await call.message.edit_text(
                     text=get_pccr(asked_user, game['chosen']) + f'Спрашиваем '
-                                                                f'♥: **{game["chosen"]["suits"]["Червы"]}**    '
-                                                                f'♦: **{game["chosen"]["suits"]["Буби"]}**    '
-                                                                f'♠: **{game["chosen"]["suits"]["Пики"]}**    '
-                                                                f'♣: **{game["chosen"]["suits"]["Крести"]}**?',
+                                                                f'♥: <b>{game["chosen"]["suits"]["Червы"]}</b>    '
+                                                                f'♦: <b>{game["chosen"]["suits"]["Буби"]}</b>    '
+                                                                f'♠: <b>{game["chosen"]["suits"]["Пики"]}</b>    '
+                                                                f'♣: <b>{game["chosen"]["suits"]["Крести"]}</b>?',
                     reply_markup=k.apply_suits(game_id)
                 )
                 await call.answer()
@@ -307,10 +307,10 @@ async def suits(call: types.CallbackQuery):
             try:
                 await call.message.edit_text(
                     text=get_pccr(asked_user, game['chosen']) + f'\nХорошо, осталось угадать масти:\n\n'
-                                                                f'♥: **{game["chosen"]["suits"]["Червы"]}**    '
-                                                                f'♦: **{game["chosen"]["suits"]["Буби"]}**    '
-                                                                f'♠: **{game["chosen"]["suits"]["Пики"]}**    '
-                                                                f'♣: **{game["chosen"]["suits"]["Крести"]}**',
+                                                                f'♥: <b>{game["chosen"]["suits"]["Червы"]}</b>    '
+                                                                f'♦: <b>{game["chosen"]["suits"]["Буби"]}</b>    '
+                                                                f'♠: <b>{game["chosen"]["suits"]["Пики"]}</b>    '
+                                                                f'♣: <b>{game["chosen"]["suits"]["Крести"]}</b>',
                     reply_markup=k.choose_suits(game_id)
                 )
             except MessageNotModified:
@@ -328,7 +328,7 @@ async def suits(call: types.CallbackQuery):
             game,
             user,
             asked_user,
-            f'**Выкинул**. Они {sc.suits_to_emoji(game["chosen"]["suits"])}'
+            f'<b>Выкинул</b>. Они {sc.suits_to_emoji(game["chosen"]["suits"])}'
         )
         mongo_games.update_one({'_id': game['_id']}, {'$set': {'cards': game['cards']}})
         game = mongo_games.find_one({'_id': game_id})
@@ -349,7 +349,7 @@ async def suits(call: types.CallbackQuery):
             game,
             user,
             asked_user,
-            f'Их **{game["chosen"]["count"]}**, красных **{game["chosen"]["count-red"]}**. '
+            f'Их <b>{game["chosen"]["count"]}</b>, красных <b>{game["chosen"]["count-red"]}</b>. '
             f'Они не {sc.suits_to_emoji(game["chosen"]["suits"])}'
         )
         try:

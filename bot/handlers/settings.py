@@ -19,33 +19,33 @@ def get_applies(player_id: int, with_num: bool = False) -> str:
     applies_list = 'Подтверждения:\n'
     for i, text in enumerate(['Карты', 'Количества карт', 'Количества красных карт', 'Мастей карт']):
         applies_list += f'\n{i + 1}. ' + text + ': ' if with_num else '\n' + text + ': '
-        applies_list += '**Включено**' if _applies[i] else '**Выключено**'
+        applies_list += '<b>Включено</b>' if _applies[i] else '<b>Выключено</b>'
     return applies_list
 
 
 def get_cards_view_with_example(player_id: int) -> str:
-    return 'Хорошо, давай посмотрим на примерах как выглядят **оба вида** '\
-           'и какой ты **выберешь**?'\
-           '\n\n**text:**\n\n'\
-           'Рука **1**:\n\n'\
-           'Количество: **2**\n'\
-           'Красные: **1**\n'\
-           'Червы: **0** Буби: **1**\n'\
-           'Чёрные: **1**\n'\
-           'Пики: **0** Крести: **1**\n\n'\
-           'Рука **2**:\n\n'\
-           'Количество: **2**\n'\
-           'Красные: **1**\n'\
-           'Червы: **0** Буби: **1**\n'\
-           'Чёрные: **2**\n'\
-           'Пики: **1** Крести: **1**\n\n'\
-           '**emoji**:\n\n'\
+    return 'Хорошо, давай посмотрим на примерах как выглядят <b>оба вида</b> '\
+           'и какой ты <b>выберешь</b>?'\
+           '\n\n<b>text:</b>\n\n'\
+           'Рука <b>1</b>:\n\n'\
+           'Количество: <b>2</b>\n'\
+           'Красные: <b>1</b>\n'\
+           'Червы: <b>0</b> Буби: <b>1</b>\n'\
+           'Чёрные: <b>1</b>\n'\
+           'Пики: <b>0</b> Крести: <b>1</b>\n\n'\
+           'Рука <b>2</b>:\n\n'\
+           'Количество: <b>2</b>\n'\
+           'Красные: <b>1</b>\n'\
+           'Червы: <b>0</b> Буби: <b>1</b>\n'\
+           'Чёрные: <b>2</b>\n'\
+           'Пики: <b>1</b> Крести: <b>1</b>\n\n'\
+           '<b>emoji</b>:\n\n'\
            'Рука 1:\n'\
            '🔴: 1 ⚫: 1\n'\
            '♦♣\n'\
            'Рука 2:\n'\
            '🔴: 1 ⚫: 2\n'\
-           f"♦♠♠\n\nТекущая настройка: **{mongo_users.find_one({'_id': player_id})['settings']['card-view']}**"
+           f"♦♠♠\n\nТекущая настройка: <b>{mongo_users.find_one({'_id': player_id})['settings']['card-view']}</b>"
 
 
 def start_menu(player_id: int) -> str:
@@ -54,10 +54,10 @@ def start_menu(player_id: int) -> str:
         game_title = 'Ещё не выбрана'
     else:
         game_title = mongo_games.find_one({'_id': user['settings']['chosen-room']})['title']
-    return f'Тебя зовут **{user["name"]}**\n\n' \
+    return f'Тебя зовут <b>{user["name"]}</b>\n\n' \
            'Твои текущие настройки:\n\n' + get_applies(player_id=player_id)\
-           + f"\n\nВид карт: **{mongo_users.find_one({'_id': player_id})['settings']['card-view']}**" \
-             f'\nТекущая комната: **{game_title}**\n'\
+           + f"\n\nВид карт: <b>{mongo_users.find_one({'_id': player_id})['settings']['card-view']}</b>" \
+             f'\nТекущая комната: <b>{game_title}</b>\n'\
            + '\nЧто будем менять?'
 
 
@@ -190,12 +190,12 @@ async def input_new_name(message: types.Message, state: FSMContext):
         return
 
     if mongo_users.find_one({'name': message.text}) is not None:
-        await message.answer(f"Введи другое имя, имя **{message.text}** уже занято")
+        await message.answer(f"Введи другое имя, имя <b>{message.text}</b> уже занято")
         return
 
     user['name'] = message.text
     mongo_users.update_one({'_id': user['_id']}, {'$set': {'name': user['name']}})
-    await message.answer(f'Успешно сменил твоё имя, теперь тебя зовут **{message.text}**')
+    await message.answer(f'Успешно сменил твоё имя, теперь тебя зовут <b>{message.text}</b>')
     await state.finish()
 
 

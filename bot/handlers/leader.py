@@ -16,7 +16,7 @@ class GameName(StatesGroup):
 
 def game_menu(_game: {}) -> str:
     is_playing = 'Now playing' if _game['active'] else 'Not started'
-    return f'**{_game["title"]}**>\n{is_playing}\n\n**Настройки: **\n\n' + sc.settings(_game)
+    return f'<b>{_game["title"]}</b>\n{is_playing}\n\n<b>Настройки: </b>\n\n' + sc.settings(_game)
 
 
 async def change_text(call: types.CallbackQuery, new_text: str, reply_markup: types.InlineKeyboardMarkup):
@@ -28,11 +28,11 @@ async def change_text(call: types.CallbackQuery, new_text: str, reply_markup: ty
 
 async def start(message: types.Message):
     playing_games_ids = mongo_users.find_one({'_id': message.from_user.id})['games']
-    leader_games = [mongo_games.find_one({'_id': game_id}) for game_id in playing_games_ids]
-    if len(leader_games) == 0:
+    games = [mongo_games.find_one({'_id': game_id}) for game_id in playing_games_ids]
+    if len(games) == 0:
         await message.answer('У тебя пока нет комнат. Хочешь создать?', reply_markup=k.leader_create())
     else:
-        await message.answer('Выбери комнату.', reply_markup=k.leader_choose_game(leader_games))
+        await message.answer('Выбери комнату.', reply_markup=k.leader_choose_game(games))
 
 
 async def start_menu(call: types.CallbackQuery):
@@ -131,7 +131,7 @@ async def game(call: types.CallbackQuery):
                             {'$set': {'games': player['games'], 'settings': player['settings']}}
                         )
                     mongo_games.delete_one({'_id': _game['_id']})
-                    await call.message.edit_text(f'Успешно удалил комнату **{_game["title"]}**.')
+                    await call.message.edit_text(f'Успешно удалил комнату <b>{_game["title"]}</b>.')
     await call.answer()
 
 
@@ -169,7 +169,7 @@ async def game_configuration(call: types.CallbackQuery):
 
     match len(data):
         case 3:
-            await change_text(call, sc.settings(_game) + '\n\n**Что меняем?**', k.leader_configuration_menu(game_id))
+            await change_text(call, sc.settings(_game) + '\n\n<b>Что меняем?</b>', k.leader_configuration_menu(game_id))
         case 4:
             match data[3]:
                 case 'count':
@@ -183,7 +183,7 @@ async def game_configuration(call: types.CallbackQuery):
                         k.leader_configuration_delete(call.message.chat.id, game_id)
                     )
                 case 'add':
-                    await change_text(call, f'**{_game["code-to-add"]}**', k.leader_configuration_add(game_id))
+                    await change_text(call, f'<b>{_game["code-to-add"]}</b>', k.leader_configuration_add(game_id))
                 case 'type':
                     await change_text(call, sc.settings(_game), k.leader_configuration_type(game_id))
                 case 'back':
@@ -212,7 +212,7 @@ async def game_configuration(call: types.CallbackQuery):
                     case 'code':
                         _game['code-to-add'] = sc.generate_code_to_add()
                         mongo_games.update_one({'_id': game_id}, {'$set': {'code-to-add': _game['code-to-add']}})
-                        await change_text(call, f'**{_game["code-to-add"]}**', k.leader_configuration_add(game_id))
+                        await change_text(call, f'<b>{_game["code-to-add"]}</b>', k.leader_configuration_add(game_id))
                     case 'type':
                         try:
                             change_type(_game, int(data[4]))
