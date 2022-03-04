@@ -122,8 +122,9 @@ def leader_end(game_id: int) -> types.InlineKeyboardMarkup:
 
 def settings_menu() -> types.InlineKeyboardMarkup:
     return make_menu(
-        ['Имя', 'Подтверждения', 'Вид карт', 'Комнату', 'Выйти'],
-        ['settings_name', 'settings_applies', 'settings_cardsView', 'settings_room', 'settings_exit']
+        ['Имя', 'Подтверждения', 'Вид карт', 'Комнату', 'Фокус-мод', 'Выйти'],
+        ['settings_name', 'settings_applies', 'settings_cardsView',
+         'settings_room', 'settings_focusMode', 'settings_exit']
     )
 
 

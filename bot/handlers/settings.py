@@ -50,6 +50,7 @@ def get_cards_view_with_example(player_id: int) -> str:
 
 def start_menu(player_id: int) -> str:
     user = mongo_users.find_one({'_id': player_id})
+    focus_mode = 'Включен' if user['settings']['focus-mode'] else 'Выключен'
     try:
         game_title = mongo_games.find_one({'_id': user['settings']['chosen-room']})['title']
     except TypeError:
@@ -57,7 +58,8 @@ def start_menu(player_id: int) -> str:
     return f'Тебя зовут <b>{user["name"]}</b>\n\n' \
            'Твои текущие настройки:\n\n' + get_applies(player_id=player_id)\
            + f"\n\nВид карт: <b>{mongo_users.find_one({'_id': player_id})['settings']['card-view']}</b>" \
-             f'\nТекущая комната: <b>{game_title}</b>\n'\
+             f'\nТекущая комната: <b>{game_title}</b>' \
+             f'\nФокус-мод: <b>{focus_mode}</b>\n'\
            + '\nЧто будем менять?'
 
 
@@ -174,6 +176,11 @@ async def settings(call: types.CallbackQuery):
                         await call.message.edit_text(start_menu(call.message.chat.id), reply_markup=k.settings_menu())
             except IndexError:
                 await call.message.edit_text('Выбери комнату.', reply_markup=k.settings_room(call.message.chat.id))
+        case 'focusMode':
+            user = mongo_users.find_one({'_id': call.message.chat.id})
+            user['settings']['focus-mode'] = not user['settings']['focus-mode']
+            mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
+            await call.message.edit_text(start_menu(call.message.chat.id), reply_markup=k.settings_menu())
         case 'exit':
             await call.message.edit_text('Удачи!')
     await call.answer()
