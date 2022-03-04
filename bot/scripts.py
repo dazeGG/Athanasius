@@ -229,9 +229,11 @@ async def message_to_all(game: {}, player: {}, asked_player: {}, request: str = 
                 _player['settings']['focus-mode-messages'][game["title"]] = \
                     _player['settings']['focus-mode-messages'].get(game["title"], '') + m + '\n'
                 mongo_users.update_one({'_id': _player['_id']}, {'$set': {'settings': _player['settings']}})
-            else:
+            '''else:
                 m = f'Игра: **{game["title"]}** - ' + m
-                await bot.send_message(_player['_id'], m)
+                await bot.send_message(_player['_id'], m)'''
+            m = f'Игра: **{game["title"]}** - ' + m
+            await bot.send_message(_player['_id'], m)
 
     with open('log.txt', 'a', encoding="utf-8") as file:
         file.write(message.replace('**', '') + '\n')
