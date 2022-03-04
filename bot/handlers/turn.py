@@ -167,73 +167,74 @@ async def cards_count(call: types.CallbackQuery):
 
 async def cards_red(call: types.CallbackQuery):
     data = call.data.split('_')
-    game_id = int(data[1])
-    game = mongo_games.find_one({'_id': game_id})
+    room_id = int(data[1])
+    room = mongo_games.find_one({'_id': room_id})
     user = mongo_users.find_one({'_id': call.message.chat.id})
-    asked_user = mongo_users.find_one({'_id': game['chosen']['player-id']})
+    asked_user = mongo_users.find_one({'_id': room['chosen']['player-id']})
     match data[2]:
         case 'yes':
             pass
         case 'no':
             await call.message.edit_text(
-                text=get_pcc(asked_user, game['chosen']) + f'\nКак думаешь, сколько из них красных?\n\n'
-                                                           f'Количество красных: <b>{game["chosen"]["count-red"]}</b>',
-                reply_markup=k.make_counter(callback=f'cardsRed_{game_id}')
+                text=get_pcc(asked_user, room['chosen']) + f'\nКак думаешь, сколько из них красных?\n\n'
+                                                           f'Количество красных: <b>{room["chosen"]["count-red"]}</b>',
+                reply_markup=k.make_counter(callback=f'cardsRed_{room_id}')
             )
             await call.answer()
             return
         case 'apply':
             if user['settings']['applies']['count-red']:
                 await call.message.edit_text(
-                    text=get_pcc(asked_user, game['chosen']) + f'\nСпрашиваем {game["chosen"]["count-red"]}?',
-                    reply_markup=k.apply_red(game_id)
+                    text=get_pcc(asked_user, room['chosen']) + f'\nСпрашиваем {room["chosen"]["count-red"]}?',
+                    reply_markup=k.apply_red(room_id)
                 )
                 await call.answer()
                 return
         case _:
-            if game['chosen']['count-red'] + int(data[2]) >= 0:
-                game['chosen']['count-red'] += int(data[2])
+            if room['chosen']['count-red'] + int(data[2]) >= 0:
+                room['chosen']['count-red'] += int(data[2])
                 await call.message.edit_text(
-                    f'{get_pcc(asked_user, game["chosen"])}\nКак думаешь, сколько из них красных?\n\n'
-                    f'Количество красных: <b>{game["chosen"]["count-red"]}</b>',
-                    reply_markup=k.make_counter(callback=f'cardsRed_{game_id}')
+                    f'{get_pcc(asked_user, room["chosen"])}\nКак думаешь, сколько из них красных?\n\n'
+                    f'Количество красных: <b>{room["chosen"]["count-red"]}</b>',
+                    reply_markup=k.make_counter(callback=f'cardsRed_{room_id}')
                 )
-                mongo_games.update_one({'_id': game['_id']}, {'$set': {'chosen': game['chosen']}})
+                mongo_games.update_one({'_id': room['_id']}, {'$set': {'chosen': room['chosen']}})
             await call.answer()
             return
-    if sc.find_cards(game, count_red=True):
-        if game['chosen']['card'] == 'W':
+    if sc.find_cards(room, count_red=True):
+        if room['chosen']['card'] == 'W':
             await call.message.delete()
-            for key in game["chosen"]["suitable-cards"].keys():
-                sc.delete_cards(game, str(asked_user['_id']), game['chosen']['card'], key)
+            for key in room["chosen"]["suitable-cards"].keys():
+                sc.delete_cards(room, str(asked_user['_id']), room['chosen']['card'], key)
                 break
-            mongo_games.update_one({'_id': game['_id']}, {'$set': {'cards': game['cards']}})
-            game = mongo_games.find_one({'_id': game_id})
-            if sc.athanasius_check(game, str(user['_id'])):
+            mongo_games.update_one({'_id': room['_id']}, {'$set': {'cards': room['cards']}})
+            room = mongo_games.find_one({'_id': room_id})
+            if sc.athanasius_check(room, str(user['_id'])):
                 await call.message.answer(
-                    f'Поздравляю!\nНи у кого больше нет {sc.change(game["chosen"]["card"])}. Добавил тебе Афанасия.'
+                    f'Поздравляю!\nНи у кого больше нет {sc.change(room["chosen"]["card"])}. Добавил тебе Афанасия.'
                 )
-                sc.add_athanasius(game, str(user['_id']))
+                sc.add_athanasius(room, str(user['_id']))
             await sc.message_to_all(
-                game,
+                room,
                 user,
                 asked_user,
-                f'<b>Выкинул</b>. Они {sc.jokers(game["chosen"]["count"], game["chosen"]["count-red"])}'
+                f'<b>Выкинул</b>. Они {sc.jokers(room["chosen"]["count"], room["chosen"]["count-red"])}'
             )
-            if sc.end_check(game):
-                await sc.end_message(game)
+            if sc.end_check(room):
+                sc.cleaning_the_room(room)
+                await sc.end_message(room)
                 await call.answer()
                 return
-            if sc.delete_player_if_hands_empty(game, user['_id']):
-                sc.change_player(game)
-            sc.delete_player_if_hands_empty(game, asked_user['_id'])
-            delete_chosen(game)
-            await sc.turn(game)
+            if sc.delete_player_if_hands_empty(room, user['_id']):
+                sc.change_player(room)
+            sc.delete_player_if_hands_empty(room, asked_user['_id'])
+            delete_chosen(room)
+            await sc.turn(room)
         else:
             await call.message.edit_text(
-                text=get_pccr(asked_user, game['chosen']) + f'\nХорошо, осталось угадать масти:\n\n'
+                text=get_pccr(asked_user, room['chosen']) + f'\nХорошо, осталось угадать масти:\n\n'
                                                             f'♥: <b>0</b>    ♦: <b>0</b>    ♠: <b>0</b>    ♣: <b>0</b>',
-                reply_markup=k.choose_suits(game_id)
+                reply_markup=k.choose_suits(room_id)
             )
     else:
         try:
@@ -243,14 +244,14 @@ async def cards_red(call: types.CallbackQuery):
                 'Не смог удалить это сообщение, поэтому ты видишь этот текст.\n'
                 'Не пугайся, ничего не сломалось, просто ты ходил больше дня)')
         await sc.message_to_all(
-            game,
+            room,
             user,
             asked_user,
-            f'Их <b>{game["chosen"]["count"]}</b>, красных не <b>{game["chosen"]["count-red"]}</b>.'
+            f'Их <b>{room["chosen"]["count"]}</b>, красных не <b>{room["chosen"]["count-red"]}</b>.'
         )
-        sc.change_player(game)
-        delete_chosen(game)
-        await sc.turn(game)
+        sc.change_player(room)
+        delete_chosen(room)
+        await sc.turn(room)
     await call.answer()
 
 
@@ -272,46 +273,46 @@ async def change_suits(game: {}, what_suit: str, what_to_do: str):
 
 async def suits(call: types.CallbackQuery):
     data = call.data.split('_')
-    game_id = int(data[1])
-    game = mongo_games.find_one({'_id': game_id})
+    room_id = int(data[1])
+    room = mongo_games.find_one({'_id': room_id})
     user = mongo_users.find_one({'_id': call.message.chat.id})
-    asked_user = mongo_users.find_one({'_id': game['chosen']['player-id']})
+    asked_user = mongo_users.find_one({'_id': room['chosen']['player-id']})
     match data[2]:
         case 'yes':
             pass
         case 'no':
             await call.message.edit_text(
-                text=get_pccr(asked_user, game['chosen']) + f'\nХорошо, осталось угадать масти:\n\n'
-                                                            f'♥: <b>{game["chosen"]["suits"]["Червы"]}</b>    '
-                                                            f'♦: <b>{game["chosen"]["suits"]["Буби"]}</b>    '
-                                                            f'♠: <b>{game["chosen"]["suits"]["Пики"]}</b>    '
-                                                            f'♣: <b>{game["chosen"]["suits"]["Крести"]}</b>',
-                reply_markup=k.choose_suits(game_id)
+                text=get_pccr(asked_user, room['chosen']) + f'\nХорошо, осталось угадать масти:\n\n'
+                                                            f'♥: <b>{room["chosen"]["suits"]["Червы"]}</b>    '
+                                                            f'♦: <b>{room["chosen"]["suits"]["Буби"]}</b>    '
+                                                            f'♠: <b>{room["chosen"]["suits"]["Пики"]}</b>    '
+                                                            f'♣: <b>{room["chosen"]["suits"]["Крести"]}</b>',
+                reply_markup=k.choose_suits(room_id)
             )
             await call.answer()
             return
         case 'apply':
             if user['settings']['applies']['suits']:
                 await call.message.edit_text(
-                    text=get_pccr(asked_user, game['chosen']) + f'Спрашиваем '
-                                                                f'♥: <b>{game["chosen"]["suits"]["Червы"]}</b>    '
-                                                                f'♦: <b>{game["chosen"]["suits"]["Буби"]}</b>    '
-                                                                f'♠: <b>{game["chosen"]["suits"]["Пики"]}</b>    '
-                                                                f'♣: <b>{game["chosen"]["suits"]["Крести"]}</b>?',
-                    reply_markup=k.apply_suits(game_id)
+                    text=get_pccr(asked_user, room['chosen']) + f'Спрашиваем '
+                                                                f'♥: <b>{room["chosen"]["suits"]["Червы"]}</b>    '
+                                                                f'♦: <b>{room["chosen"]["suits"]["Буби"]}</b>    '
+                                                                f'♠: <b>{room["chosen"]["suits"]["Пики"]}</b>    '
+                                                                f'♣: <b>{room["chosen"]["suits"]["Крести"]}</b>?',
+                    reply_markup=k.apply_suits(room_id)
                 )
                 await call.answer()
                 return
         case _:
-            await change_suits(game, data[2][0], data[2][1])
+            await change_suits(room, data[2][0], data[2][1])
             try:
                 await call.message.edit_text(
-                    text=get_pccr(asked_user, game['chosen']) + f'\nХорошо, осталось угадать масти:\n\n'
-                                                                f'♥: <b>{game["chosen"]["suits"]["Червы"]}</b>    '
-                                                                f'♦: <b>{game["chosen"]["suits"]["Буби"]}</b>    '
-                                                                f'♠: <b>{game["chosen"]["suits"]["Пики"]}</b>    '
-                                                                f'♣: <b>{game["chosen"]["suits"]["Крести"]}</b>',
-                    reply_markup=k.choose_suits(game_id)
+                    text=get_pccr(asked_user, room['chosen']) + f'\nХорошо, осталось угадать масти:\n\n'
+                                                                f'♥: <b>{room["chosen"]["suits"]["Червы"]}</b>    '
+                                                                f'♦: <b>{room["chosen"]["suits"]["Буби"]}</b>    '
+                                                                f'♠: <b>{room["chosen"]["suits"]["Пики"]}</b>    '
+                                                                f'♣: <b>{room["chosen"]["suits"]["Крести"]}</b>',
+                    reply_markup=k.choose_suits(room_id)
                 )
             except MessageNotModified:
                 pass
@@ -319,38 +320,39 @@ async def suits(call: types.CallbackQuery):
                 pass
             await call.answer()
             return
-    if sc.find_cards(game, suits=True):
+    if sc.find_cards(room, suits=True):
         await call.message.delete()
-        for key in game["chosen"]["suitable-cards"].keys():
-            sc.delete_cards(game, str(asked_user['_id']), game['chosen']['card'], key)
+        for key in room["chosen"]["suitable-cards"].keys():
+            sc.delete_cards(room, str(asked_user['_id']), room['chosen']['card'], key)
             break
         await sc.message_to_all(
-            game,
+            room,
             user,
             asked_user,
-            f'<b>Выкинул</b>. Они {sc.suits_to_emoji(game["chosen"]["suits"])}'
+            f'<b>Выкинул</b>. Они {sc.suits_to_emoji(room["chosen"]["suits"])}'
         )
-        mongo_games.update_one({'_id': game['_id']}, {'$set': {'cards': game['cards']}})
-        game = mongo_games.find_one({'_id': game_id})
-        if sc.athanasius_check(game, str(user['_id'])):
+        mongo_games.update_one({'_id': room['_id']}, {'$set': {'cards': room['cards']}})
+        room = mongo_games.find_one({'_id': room_id})
+        if sc.athanasius_check(room, str(user['_id'])):
             await call.message.answer(
-                f'Поздравляю!\nНи у кого больше нет {sc.change(game["chosen"]["card"])}. Добавил тебе Афанасия.'
+                f'Поздравляю!\nНи у кого больше нет {sc.change(room["chosen"]["card"])}. Добавил тебе Афанасия.'
             )
-            sc.add_athanasius(game, str(user['_id']))
-        if sc.end_check(game):
-            await sc.end_message(game)
+            sc.add_athanasius(room, str(user['_id']))
+        if sc.end_check(room):
+            sc.cleaning_the_room(room)
+            await sc.end_message(room)
             await call.answer()
             return
-        if sc.delete_player_if_hands_empty(game, user['_id']):
-            sc.change_player(game)
-        sc.delete_player_if_hands_empty(game, asked_user['_id'])
+        if sc.delete_player_if_hands_empty(room, user['_id']):
+            sc.change_player(room)
+        sc.delete_player_if_hands_empty(room, asked_user['_id'])
     else:
         await sc.message_to_all(
-            game,
+            room,
             user,
             asked_user,
-            f'Их <b>{game["chosen"]["count"]}</b>, красных <b>{game["chosen"]["count-red"]}</b>. '
-            f'Они не {sc.suits_to_emoji(game["chosen"]["suits"])}'
+            f'Их <b>{room["chosen"]["count"]}</b>, красных <b>{room["chosen"]["count-red"]}</b>. '
+            f'Они не {sc.suits_to_emoji(room["chosen"]["suits"])}'
         )
         try:
             await call.message.delete()
@@ -358,9 +360,9 @@ async def suits(call: types.CallbackQuery):
             await call.message.edit_text(
                 'Не смог удалить это сообщение, поэтому ты видишь этот текст.\n'
                 'Не пугайся, ничего не сломалось, просто ты ходил больше дня)')
-        sc.change_player(game)
-    delete_chosen(game)
-    await sc.turn(game)
+        sc.change_player(room)
+    delete_chosen(room)
+    await sc.turn(room)
     await call.answer()
 
 

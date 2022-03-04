@@ -28,6 +28,27 @@ def generate_code_to_add() -> str:
     return code
 
 
+def make_notes(game: {}):
+    cards = ''
+    match game['config']['type-of-deck']:
+        case 36:
+            cards += '6789XJQKA'
+        case 52:
+            cards += '23456789XJQKA'
+        case 54:
+            cards += '23456789XJQKAW'
+    d = {}
+    for player_id in game['players-ids']:
+        d[str(player_id)] = {}
+        for card in cards:
+            d[str(player_id)][card] = []
+            for j in range(game['config']['count-of-decks']):
+                d[str(player_id)][card].append([])
+                for k in range(4):
+                    d[str(player_id)][card][j].append('-')
+    mongo_games.update_one({'_id': game['_id']}, {'$set': {'notes': d}})
+
+
 async def athanasius_early_check(game: {}):
     cards = ['6', '7', '8', '9', 'X', 'J', 'Q', 'K', 'A']
 
@@ -407,10 +428,24 @@ async def end_message(game: {}):
     for player in players:
         await bot.send_message(player[0], message, reply_markup=types.ReplyKeyboardRemove())
 
-    mongo_games.update_one({'_id': game['_id']}, {'$set': {'active': False}})
-
 
 '''    MISC    '''
+
+
+def cleaning_the_room(room: {}):
+    room['chosen']['card'] = ''
+    room['chosen']['count'] = 1
+    room['chosen']['count-red'] = 0
+    room['chosen']['suits'] = {'Червы': 0, 'Буби': 0, 'Пики': 0, 'Крести': 0}
+    room['chosen']['suitable-cards'] = {}
+
+    mongo_games.update_one({'_id': room['_id']}, {'$set': {
+        'chosen': room['chosen'],
+        'active': False,
+        'notes': {},
+        'cards': {},
+        'athanasias': {},
+    }})
 
 
 def list_of_players(players_ids: []) -> str:
