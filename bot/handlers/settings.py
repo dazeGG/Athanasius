@@ -50,10 +50,10 @@ def get_cards_view_with_example(player_id: int) -> str:
 
 def start_menu(player_id: int) -> str:
     user = mongo_users.find_one({'_id': player_id})
-    if user['settings']['chosen-room'] == 0:
-        game_title = 'Ещё не выбрана'
-    else:
+    try:
         game_title = mongo_games.find_one({'_id': user['settings']['chosen-room']})['title']
+    except TypeError:
+        game_title = 'Ещё не выбрана'
     return f'Тебя зовут <b>{user["name"]}</b>\n\n' \
            'Твои текущие настройки:\n\n' + get_applies(player_id=player_id)\
            + f"\n\nВид карт: <b>{mongo_users.find_one({'_id': player_id})['settings']['card-view']}</b>" \
