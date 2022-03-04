@@ -133,8 +133,9 @@ def shuffle_players(game: {}):
 async def turn(game: {}):
     user = mongo_users.find_one({'_id': game['queue'][0]})
     if user['settings']['focus-mode']:
-        await bot.send_message(game['queue'][0], 'Ходы:\n\n' + user['settings']['focus-mode-message'])
-        user['settings']['focus-mode-message'] = ''
+        await bot.send_message(game['queue'][0], f'Игра: **{game["title"]}**\n\n'
+                               + user['settings']['focus-mode-messages'][game['title']])
+        user['settings']['focus-mode-messages'][game['title']] = ''
         mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
     message = 'Твой ход!\nУ кого спросим карты?'
     await bot.send_message(game['queue'][0], message, reply_markup=choose_player(game['queue'][0], game))
@@ -213,12 +214,12 @@ def find_cards(game: {}, card: bool = False, count: bool = False, count_red: boo
 
 
 async def message_to_all(game: {}, player: {}, asked_player: {}, request: str = ''):
-    message = f'Игра: **{game["title"]}** - **{player["name"]} -> {asked_player["name"]}** - ' \
-              f'{change(game["chosen"]["card"])} - {request}'
+    message = f'**{player["name"]} -> {asked_player["name"]}** - {change(game["chosen"]["card"])} - {request}'
 
     for _player in mongo_users.find({'_id': {'$in': game['players-ids']}}):
         if _player['_id'] == player['_id']:
-            await bot.send_message(_player['_id'], message.replace(player["name"], 'Ты'))
+            m = f'Игра: **{game["title"]}** - ' + message.replace(player["name"], 'Ты')
+            await bot.send_message(_player['_id'], m)
         else:
             if _player['_id'] == asked_player["_id"]:
                 m = message.replace(asked_player["name"], 'Ты')
@@ -229,6 +230,7 @@ async def message_to_all(game: {}, player: {}, asked_player: {}, request: str = 
                     _player['settings']['focus-mode-messages'].get(game["title"], '') + m + '\n'
                 mongo_users.update_one({'_id': _player['_id']}, {'$set': {'settings': _player['settings']}})
             else:
+                m = f'Игра: **{game["title"]}** - ' + m
                 await bot.send_message(_player['_id'], m)
 
     with open('log.txt', 'a', encoding="utf-8") as file:

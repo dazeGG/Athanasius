@@ -8,5 +8,5 @@ if __name__ == '__main__':
         settings['focus-mode-messages'] = {}
         settings['card-view'] = 'emoji'
         print(user)
-        # collection.mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
-        # collection.mongo_games.update_one({'_id': game['_id']}, {'$set': {'': }})
+        # mongo_users.update_one({'_id': user['_id']}, {'$set': {'': }})
+        # mongo_games.update_one({'_id': game['_id']}, {'$set': {'': }})
