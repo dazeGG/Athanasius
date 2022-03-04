@@ -132,7 +132,7 @@ def shuffle_players(game: {}):
 async def turn(game: {}):
     user = mongo_users.find_one({'_id': game['queue'][0]})
     if user['settings']['focus-mode']:
-        await bot.send_message(game['queue'][0], f'Игра: <b>{game["title"]}<b>\n\n'
+        await bot.send_message(game['queue'][0], f'Игра: <b>{game["title"]}</b>\n\n'
                                + user['settings']['focus-mode-messages'][game['title']])
         user['settings']['focus-mode-messages'][game['title']] = ''
         mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
@@ -213,11 +213,11 @@ def find_cards(game: {}, card: bool = False, count: bool = False, count_red: boo
 
 
 async def message_to_all(game: {}, player: {}, asked_player: {}, request: str = ''):
-    message = f'<b>{player["name"]} -> {asked_player["name"]}<b> - {change(game["chosen"]["card"])} - {request}'
+    message = f'<b>{player["name"]} -> {asked_player["name"]}</b> - {change(game["chosen"]["card"])} - {request}'
 
     for _player in mongo_users.find({'_id': {'$in': game['players-ids']}}):
         if _player['_id'] == player['_id']:
-            m = f'Игра: <b>{game["title"]}<b> - ' + message.replace(player["name"], 'Ты')
+            m = f'Игра: <b>{game["title"]}</b> - ' + message.replace(player["name"], 'Ты')
             await bot.send_message(_player['_id'], m)
         else:
             if _player['_id'] == asked_player["_id"]:
@@ -229,13 +229,13 @@ async def message_to_all(game: {}, player: {}, asked_player: {}, request: str = 
                     _player['settings']['focus-mode-messages'].get(game["title"], '') + m + '\n'
                 mongo_users.update_one({'_id': _player['_id']}, {'$set': {'settings': _player['settings']}})
             '''else:
-                m = f'Игра: <b>{game["title"]}<b> - ' + m
+                m = f'Игра: <b>{game["title"]}</b> - ' + m
                 await bot.send_message(_player['_id'], m)'''
-            m = f'Игра: <b>{game["title"]}<b> - ' + m
+            m = f'Игра: <b>{game["title"]}</b> - ' + m
             await bot.send_message(_player['_id'], m)
 
     with open('log.txt', 'a', encoding="utf-8") as file:
-        file.write(message.replace('<b>', '') + '\n')
+        file.write(message.replace('<b>', '').replace('</b>', '') + '\n')
 
 
 def unique_owner(game: {}, card: str, player_id: str) -> bool:
@@ -334,17 +334,17 @@ def get_card_info(game: {}, player_id: int, card: str) -> str:
             card_info += f'Карта: {change(card)}\n\n'
             for hand in hands_with_card:
                 if len(hands_with_card) > 1:
-                    card_info += f'<b>Рука {hand.split("-")[1]}<b>\n'
+                    card_info += f'<b>Рука {hand.split("-")[1]}</b>\n'
                 if card == 'W':
-                    card_info += f'{change("Красные")}: <b>{counter[hand]["Красные"]}<b>'
-                    card_info += f'{change("Чёрные")}: <b>{counter[hand]["Чёрные"]}<b>\n\n'
+                    card_info += f'{change("Красные")}: <b>{counter[hand]["Красные"]}</b>'
+                    card_info += f'{change("Чёрные")}: <b>{counter[hand]["Чёрные"]}</b>\n\n'
                 else:
-                    card_info += f'{change("Красные")}: <b>{counter[hand]["Красные"]}<b>    '
-                    card_info += f'{change("Червы")}: <b>{counter[hand]["Червы"]}<b> '
-                    card_info += f'{change("Буби")}: <b>{counter[hand]["Буби"]}<b>\n'
-                    card_info += f'{change("Чёрные")}: <b>{counter[hand]["Чёрные"]}<b>    '
-                    card_info += f'{change("Пики")}: <b>{counter[hand]["Пики"]}<b> '
-                    card_info += f'{change("Крести")}: <b>{counter[hand]["Крести"]}<b>\n'
+                    card_info += f'{change("Красные")}: <b>{counter[hand]["Красные"]}</b>    '
+                    card_info += f'{change("Червы")}: <b>{counter[hand]["Червы"]}</b> '
+                    card_info += f'{change("Буби")}: <b>{counter[hand]["Буби"]}</b>\n'
+                    card_info += f'{change("Чёрные")}: <b>{counter[hand]["Чёрные"]}</b>    '
+                    card_info += f'{change("Пики")}: <b>{counter[hand]["Пики"]}</b> '
+                    card_info += f'{change("Крести")}: <b>{counter[hand]["Крести"]}</b>\n'
         case 'minimal':
             pass
             # todo дописать минималистичный вид карты
@@ -416,7 +416,7 @@ def list_of_players(players_ids: []) -> str:
     players = mongo_users.find({'_id': {'$in': players_ids}})
     message_to_out = ''
     for player_index, player in enumerate(players, 1):
-        message_to_out += f'\n<b>{player_index}. {player["name"]}<b>'
+        message_to_out += f'\n<b>{player_index}. {player["name"]}</b>'
     return message_to_out
 
 
@@ -433,16 +433,16 @@ def settings(game: {}) -> str:
 
     match cfg['type-of-deck']:
         case 36:
-            type_of_deck = 'Неполная колода(<b>36<b> карт)'
+            type_of_deck = 'Неполная колода(<b>36</b> карт)'
         case 52:
-            type_of_deck = 'Полная колода(<b>52<b> карты)'
+            type_of_deck = 'Полная колода(<b>52</b> карты)'
         case _:
-            type_of_deck = 'Колода с джокерами(<b>54<b> карты)'
+            type_of_deck = 'Колода с джокерами(<b>54</b> карты)'
 
-    return 'Список игроков:\n' + list_of_players(game["players-ids"]) + '\n\n' \
-                                                                        f'Число колод: <b>{cfg["count-of-decks"]}<b>\n' \
-                                                                        f'Число рук: <b>{cfg["count-of-hands"]}<b>\n' \
-                                                                        f'Тип колоды: {type_of_deck}'
+    return 'Список игроков:\n' \
+           + list_of_players(game["players-ids"]) + f'\n\nЧисло колод: <b>{cfg["count-of-decks"]}</b>\n' \
+                                                    f'Число рук: <b>{cfg["count-of-hands"]}</b>\n' \
+                                                    f'Тип колоды: {type_of_deck}'
 
 
 def change(str_or_emoji: str) -> str:
