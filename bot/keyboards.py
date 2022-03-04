@@ -144,7 +144,7 @@ def settings_cards_view() -> types.InlineKeyboardMarkup:
 
 
 def settings_room(player_id: int) -> types.InlineKeyboardMarkup:
-    user_games_ids = mongo_users.find_one({'_id': player_id})['mongo_games']
+    user_games_ids = mongo_users.find_one({'_id': player_id})['games']
     games_titles = []
     for user_game_id in user_games_ids:
         games_titles.append(mongo_games.find_one({'_id': user_game_id})['title'])

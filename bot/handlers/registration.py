@@ -42,7 +42,7 @@ async def registration(message: types.Message, state: FSMContext):
             'chosen-room': 0,
             'focus-mode-messages': {},
         },
-        'mongo_games': [],
+        'games': [],
     })
 
     await message.answer(

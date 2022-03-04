@@ -102,8 +102,8 @@ async def add_player(message: types.Message):
         return
     for game in mongo_games.find():
         if message.text == game['code-to-add']:
-            user['mongo_games'].append(game['_id'])
-            mongo_users.update_one({'_id': user['_id']}, {'$set': {'mongo_games': user['mongo_games']}})
+            user['games'].append(game['_id'])
+            mongo_users.update_one({'_id': user['_id']}, {'$set': {'games': user['games']}})
 
             for player_id in game['players-ids']:
                 await bot.send_message(player_id, f'У нас новый игрок! Его зовут **{user["name"]}**.')
