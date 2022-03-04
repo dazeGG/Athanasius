@@ -130,12 +130,15 @@ def shuffle_players(game: {}):
 
 
 async def turn(game: {}):
-    user = mongo_users.find_one({'_id': game['queue'][0]})
-    if user['settings']['focus-mode']:
-        await bot.send_message(game['queue'][0], f'Игра: <b>{game["title"]}</b>\n\n'
-                               + user['settings']['focus-mode-messages'][game['title']])
-        user['settings']['focus-mode-messages'][game['title']] = ''
-        mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
+    try:
+        user = mongo_users.find_one({'_id': game['queue'][0]})
+        if user['settings']['focus-mode']:
+            await bot.send_message(game['queue'][0], f'Игра: <b>{game["title"]}</b>\n\n'
+                                   + user['settings']['focus-mode-messages'][game['title']])
+            user['settings']['focus-mode-messages'][game['title']] = ''
+            mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
+    except KeyError:
+        pass
     message = 'Твой ход!\nУ кого спросим карты?'
     await bot.send_message(game['queue'][0], message, reply_markup=choose_player(game['queue'][0], game))
 
