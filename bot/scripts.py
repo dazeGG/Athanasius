@@ -28,9 +28,9 @@ def generate_code_to_add() -> str:
     return code
 
 
-def make_notes(game: {}):
+def make_notes(room: {}):
     cards = ''
-    match game['config']['type-of-deck']:
+    match room['config']['type-of-deck']:
         case 36:
             cards += '6789XJQKA'
         case 52:
@@ -38,15 +38,15 @@ def make_notes(game: {}):
         case 54:
             cards += '23456789XJQKAW'
     d = {}
-    for player_id in game['players-ids']:
+    for player_id in room['players-ids']:
         d[str(player_id)] = {}
         for card in cards:
             d[str(player_id)][card] = []
-            for j in range(game['config']['count-of-decks']):
+            for j in range(room['config']['count-of-decks']):
                 d[str(player_id)][card].append([])
                 for k in range(4):
                     d[str(player_id)][card][j].append('-')
-    mongo_games.update_one({'_id': game['_id']}, {'$set': {'notes': d}})
+    mongo_games.update_one({'_id': room['_id']}, {'$set': {'notes': d}})
 
 
 async def athanasius_early_check(game: {}):

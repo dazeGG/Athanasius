@@ -1,11 +1,16 @@
 from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import IDFilter, Text
+from aiogram.dispatcher.filters.state import State, StatesGroup
 
 import bot.keyboards as k
 import bot.scripts as sc
 
 from bot.config import bot, mongo_users, mongo_games
+
+
+class Note(StatesGroup):
+    input_note = State()
 
 
 async def start(message: types.Message, state: FSMContext):
@@ -108,9 +113,39 @@ async def notes(message: types.Message):
 
 async def notes_card(call: types.CallbackQuery):
     data = call.data.split('_')
+    print(data)
+    room_id = int(data[1])
     user = mongo_users.find_one({'_id': call.message.chat.id})
-    game_id = int(data[1])
-    game = mongo_games.find_one({'_id': game_id})
+    room = mongo_games.find_one({'_id': room_id})
+    match len(data):
+        case 3:
+            match data[2]:
+                case 'back':
+                    await call.message.edit_text(
+                        text='Выбери карту к которой добавить заметки',
+                        reply_markup=k.notes_card_choose(room)
+                    )
+                case _:
+                    await call.message.edit_text(
+                        text=f'Карта: {sc.change(data[2])}',
+                        reply_markup=k.notes(room, call.message.chat.id, data[2])
+                    )
+        case 5:
+            await call.message.edit_text(text='Напиши мне, что туда вписать.')
+            mongo_users.update_one({'_id': user['_id']}, {'$set':
+                                                              {'note': [room_id, data[2], int(data[3]), int(data[4])]}})
+            await Note.input_note.set()
+
+
+async def input_note(message: types.Message, state: FSMContext):
+    user = mongo_users.find_one({'_id': message.from_user.id})
+    room_id, card, i, j = user['note'][0], user['note'][1], user['note'][2], user['note'][3]
+    mongo_users.update_one({'_id': user['_id']}, {'$unset': {'note': ''}})
+    room = mongo_games.find_one({'_id': room_id})
+    room['notes'][str(message.from_user.id)][card][i][j] = message.text
+    mongo_games.update_one({'_id': room['_id']}, {'$set': {'notes': room['notes']}})
+    await message.answer(f'Карта: {sc.change(card)}', reply_markup=k.notes(room, message.from_user.id, card))
+    await state.finish()
 
 
 async def add_player(message: types.Message):
@@ -144,4 +179,5 @@ def register_handlers_common(dp: Dispatcher, admin_ids: list):
     dp.register_message_handler(athanasias_list, text="Афанасии")
     dp.register_message_handler(notes, IDFilter(user_id=admin_ids), text="Заметки")
     dp.register_callback_query_handler(notes_card, Text(startswith='notes_'))
+    dp.register_message_handler(input_note, state=Note.input_note)
     dp.register_message_handler(add_player)

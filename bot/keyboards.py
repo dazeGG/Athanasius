@@ -276,8 +276,20 @@ def notes_card_choose(game: {}) -> types.InlineKeyboardMarkup:
     buttons = []
     for card in cards:
         buttons.append(types.InlineKeyboardButton(text=sc.change(card), callback_data=f'notes_{game["_id"]}_{card}'))
-    return types.InlineKeyboardMarkup().add(*buttons).add(
-        types.InlineKeyboardButton(text='Выбрать другую карту', callback_data=f'notes_{game["_id"]}_another'))
+    return types.InlineKeyboardMarkup().add(*buttons)
+
+
+def notes(room: {}, player_id: int, card: str) -> types.InlineKeyboardMarkup:
+    buttons = []
+    _notes = room['notes'][f'{player_id}'][card]
+    for i in range(len(_notes)):
+        for j in range(4):
+            buttons.append(types.InlineKeyboardButton(
+                text=room['notes'][f'{player_id}'][card][i][j],
+                callback_data=f'notes_{room["_id"]}_{card}_{i}_{j}'
+            ))
+    return types.InlineKeyboardMarkup(row_width=4).add(*buttons).add(
+        types.InlineKeyboardButton(text='Назад', callback_data=f'notes_{room["_id"]}_back'))
 
 
 '''    MENU CONSTRUCTOR    '''
