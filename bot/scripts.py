@@ -432,6 +432,10 @@ async def end_message(game: {}):
 '''    MISC    '''
 
 
+def name_by_id(player_id: int) -> str:
+    return mongo_users.find_one({'_id': player_id})['name']
+
+
 def cleaning_the_room(room: {}):
     room['chosen']['card'] = ''
     room['chosen']['count'] = 1

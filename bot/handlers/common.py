@@ -113,7 +113,6 @@ async def notes(message: types.Message):
 
 async def notes_card(call: types.CallbackQuery):
     data = call.data.split('_')
-    print(data)
     room_id = int(data[1])
     user = mongo_users.find_one({'_id': call.message.chat.id})
     room = mongo_games.find_one({'_id': room_id})
@@ -131,7 +130,11 @@ async def notes_card(call: types.CallbackQuery):
                         reply_markup=k.notes(room, call.message.chat.id, data[2])
                     )
         case 5:
-            await call.message.edit_text(text='Напиши мне, что туда вписать.')
+            await call.message.delete()
+            await call.message.answer(
+                text='Напиши мне, что туда вписать.',
+                reply_markup=k.players_names_for_notes(room, call.message.chat.id)
+            )
             mongo_users.update_one({'_id': user['_id']}, {'$set': {
                 'note': [room_id, data[2], int(data[3]), int(data[4])]}})
             await Note.input_note.set()
@@ -144,6 +147,7 @@ async def input_note(message: types.Message, state: FSMContext):
     room = mongo_games.find_one({'_id': room_id})
     room['notes'][str(message.from_user.id)][card][i][j] = message.text
     mongo_games.update_one({'_id': room['_id']}, {'$set': {'notes': room['notes']}})
+    await message.answer('Успешно добавил заметку!', reply_markup=k.default_menu())
     await message.answer(f'Карта: {sc.change(card)}', reply_markup=k.notes(room, message.from_user.id, card))
     await state.finish()
 
