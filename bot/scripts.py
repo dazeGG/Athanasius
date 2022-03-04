@@ -213,7 +213,7 @@ def find_cards(game: {}, card: bool = False, count: bool = False, count_red: boo
 
 
 async def message_to_all(game: {}, player: {}, asked_player: {}, request: str = ''):
-    message = f'Игра: <b>{game["title"]}</b> - <b>{player["name"]} -> {asked_player["name"]}</b> - ' \
+    message = f'Игра: **{game["title"]}** - **{player["name"]} -> {asked_player["name"]}** - ' \
               f'{change(game["chosen"]["card"])} - {request}'
 
     for _player in mongo_users.find({'_id': {'$in': game['players-ids']}}):
@@ -225,13 +225,14 @@ async def message_to_all(game: {}, player: {}, asked_player: {}, request: str = 
             else:
                 m = message
             if _player['settings']['focus-mode']:
-                _player['settings']['focus-mode-message'] += m + '\n'
+                _player['settings']['focus-mode-messages'][game["title"]] = \
+                    _player['settings']['focus-mode-messages'].get(game["title"], '') + m + '\n'
                 mongo_users.update_one({'_id': _player['_id']}, {'$set': {'settings': _player['settings']}})
             else:
                 await bot.send_message(_player['_id'], m)
 
     with open('log.txt', 'a', encoding="utf-8") as file:
-        file.write(message.replace('<b>', '') + '\n')
+        file.write(message.replace('**', '') + '\n')
 
 
 def unique_owner(game: {}, card: str, player_id: str) -> bool:
@@ -330,17 +331,17 @@ def get_card_info(game: {}, player_id: int, card: str) -> str:
             card_info += f'Карта: {change(card)}\n\n'
             for hand in hands_with_card:
                 if len(hands_with_card) > 1:
-                    card_info += f'<b>Рука {hand.split("-")[1]}</b>\n'
+                    card_info += f'**Рука {hand.split("-")[1]}**\n'
                 if card == 'W':
-                    card_info += f'{change("Красные")}: <b>{counter[hand]["Красные"]}</b>'
-                    card_info += f'{change("Чёрные")}: <b>{counter[hand]["Чёрные"]}</b>\n\n'
+                    card_info += f'{change("Красные")}: **{counter[hand]["Красные"]}**'
+                    card_info += f'{change("Чёрные")}: **{counter[hand]["Чёрные"]}**\n\n'
                 else:
-                    card_info += f'{change("Красные")}: <b>{counter[hand]["Красные"]}</b>    '
-                    card_info += f'{change("Червы")}: <b>{counter[hand]["Червы"]}</b> '
-                    card_info += f'{change("Буби")}: <b>{counter[hand]["Буби"]}</b>\n'
-                    card_info += f'{change("Чёрные")}: <b>{counter[hand]["Чёрные"]}</b>    '
-                    card_info += f'{change("Пики")}: <b>{counter[hand]["Пики"]}</b> '
-                    card_info += f'{change("Крести")}: <b>{counter[hand]["Крести"]}</b>\n'
+                    card_info += f'{change("Красные")}: **{counter[hand]["Красные"]}**    '
+                    card_info += f'{change("Червы")}: **{counter[hand]["Червы"]}** '
+                    card_info += f'{change("Буби")}: **{counter[hand]["Буби"]}**\n'
+                    card_info += f'{change("Чёрные")}: **{counter[hand]["Чёрные"]}**    '
+                    card_info += f'{change("Пики")}: **{counter[hand]["Пики"]}** '
+                    card_info += f'{change("Крести")}: **{counter[hand]["Крести"]}**\n'
         case 'minimal':
             pass
             # todo дописать минималистичный вид карты
@@ -412,7 +413,7 @@ def list_of_players(players_ids: []) -> str:
     players = mongo_users.find({'_id': {'$in': players_ids}})
     message_to_out = ''
     for player_index, player in enumerate(players, 1):
-        message_to_out += f'\n<b>{player_index}. {player["name"]}</b>'
+        message_to_out += f'\n**{player_index}. {player["name"]}**'
     return message_to_out
 
 
@@ -429,15 +430,15 @@ def settings(game: {}) -> str:
 
     match cfg['type-of-deck']:
         case 36:
-            type_of_deck = 'Неполная колода(<b>36</b> карт)'
+            type_of_deck = 'Неполная колода(**36** карт)'
         case 52:
-            type_of_deck = 'Полная колода(<b>52</b> карты)'
+            type_of_deck = 'Полная колода(**52** карты)'
         case _:
-            type_of_deck = 'Колода с джокерами(<b>54</b> карты)'
+            type_of_deck = 'Колода с джокерами(**54** карты)'
 
     return 'Список игроков:\n' + list_of_players(game["players-ids"]) + '\n\n' \
-           f'Число колод: <b>{cfg["count-of-decks"]}</b>\n' \
-           f'Число рук: <b>{cfg["count-of-hands"]}</b>\n' \
+           f'Число колод: **{cfg["count-of-decks"]}**\n' \
+           f'Число рук: **{cfg["count-of-hands"]}**\n' \
            f'Тип колоды: {type_of_deck}'
 
 
