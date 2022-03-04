@@ -52,13 +52,13 @@ async def athanasius_early_check(game: {}):
                 await bot.send_message(
                     player_id,
                     'Поздравляю! У тебя с самого начала есть Афанасий. '
-                    'Посмотреть его можно, нажав на кнопку Мои Афанасии'
+                    'Посмотреть его можно, нажав на кнопку Афанасии'
                 )
             else:
                 await bot.send_message(
                     player_id,
                     'Поздравляю! У тебя с самого начала есть несколько Афанасиев. '
-                    'Посмотреть их можно, нажав на кнопку Мои Афанасии'
+                    'Посмотреть их можно, нажав на кнопку Афанасии'
                 )
             game['athanasias'][player_id] = athanasias
         mongo_games.update_one(
