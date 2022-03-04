@@ -2,7 +2,7 @@ from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
-from bot.config import collection
+from bot.config import mongo_users
 
 
 class AthanasiusReg(StatesGroup):
@@ -10,7 +10,7 @@ class AthanasiusReg(StatesGroup):
 
 
 async def reg_start(message: types.Message):
-    if collection.users.find_one({'_id': message.from_user.id}) is None:
+    if mongo_users.find_one({'_id': message.from_user.id}) is None:
         await message.answer("Как тебя зовут?")
         await AthanasiusReg.registration.set()
         return
@@ -22,11 +22,11 @@ async def registration(message: types.Message, state: FSMContext):
         await message.answer(f"Введи другое имя, максимальная длина имени 16 символов)")
         return
 
-    if collection.users.find_one({'name': message.text}) is not None:
+    if mongo_users.find_one({'name': message.text}) is not None:
         await message.answer(f"Введи другое имя, имя **{message.text}** уже занято")
         return
 
-    collection.users.insert_one({
+    mongo_users.insert_one({
         '_id': message.from_user.id,
         'name': message.text,
         'tg': message.from_user.username,
@@ -40,8 +40,9 @@ async def registration(message: types.Message, state: FSMContext):
             'focus-mode': False,
             'card-view': 'emoji',
             'chosen-room': 0,
+            'focus-mode-messages': {},
         },
-        'games': [],
+        'mongo_games': [],
     })
 
     await message.answer(

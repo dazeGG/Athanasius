@@ -2,14 +2,14 @@ from aiogram import types
 from random import shuffle, randint
 
 from bot.keyboards import choose_player
-from bot.config import bot, collection
+from bot.config import bot, mongo_users, mongo_games
 
 
 '''    LEADER SCRIPTS   '''
 
 
 def set_new_game_id() -> int:
-    last_game = collection.games.find_one({'$query': {}, '$orderby': {'_id': -1}})
+    last_game = mongo_games.find_one({'$query': {}, '$orderby': {'_id': -1}})
     if last_game is None:
         return 1
     return last_game['_id'] + 1
@@ -24,7 +24,7 @@ def generate_part_of_code_to_add() -> str:
 def generate_code_to_add() -> str:
     while True:
         code = '-'.join([generate_part_of_code_to_add() for _ in range(4)])
-        if collection.games.find_one({'code-to-add': code}) is None:
+        if mongo_games.find_one({'code-to-add': code}) is None:
             break
     return code
 
@@ -62,7 +62,7 @@ async def athanasius_early_check(game: {}):
                     'Посмотреть их можно, нажав на кнопку Мои Афанасии'
                 )
             game['athanasias'][player_id] = athanasias
-        collection.games.update_one(
+        mongo_games.update_one(
             {'_id': game['_id']},
             {'$set': {'athanasias': game['athanasias'], 'cards': game['cards']}}
         )
@@ -118,24 +118,24 @@ def card_distributor(game: {}):
         for number_of_hand in range(count_of_hands):
             players_decks[player_id][f'hand-{number_of_hand + 1}'].sort()
 
-    collection.games.update_one({'_id': game['_id']}, {'$set': {'cards': players_decks, 'athanasias': athanasias}})
+    mongo_games.update_one({'_id': game['_id']}, {'$set': {'cards': players_decks, 'athanasias': athanasias}})
 
 
 def shuffle_players(game: {}):
     queue = game['players-ids']
     shuffle(queue)
-    collection.games.update_one({'_id': game['_id']}, {'$set': {'queue': queue}})
+    mongo_games.update_one({'_id': game['_id']}, {'$set': {'queue': queue}})
 
 
 '''    IN GAME SCRIPTS    '''
 
 
 async def turn(game: {}):
-    user = collection.users.find_one({'_id': game['queue'][0]})
+    user = mongo_users.find_one({'_id': game['queue'][0]})
     if user['settings']['focus-mode']:
         await bot.send_message(game['queue'][0], 'Ходы:\n\n' + user['settings']['focus-mode-message'])
         user['settings']['focus-mode-message'] = ''
-        collection.users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
+        mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
     message = 'Твой ход!\nУ кого спросим карты?'
     await bot.send_message(game['queue'][0], message, reply_markup=choose_player(game['queue'][0], game))
 
@@ -154,7 +154,7 @@ def player_available_cards(game: {}, player_id: int) -> tuple:
 
 def change_player(game: {}):
     game['queue'].append(game['queue'].pop(0))
-    collection.games.update_one({'_id': game['_id']}, {'$set': {'queue': game['queue']}})
+    mongo_games.update_one({'_id': game['_id']}, {'$set': {'queue': game['queue']}})
 
 
 def find_cards(game: {}, card: bool = False, count: bool = False, count_red: bool = False, suits: bool = False) -> bool:
@@ -208,7 +208,7 @@ def find_cards(game: {}, card: bool = False, count: bool = False, count_red: boo
                 keys_to_delete.append(hand)
     for key_to_delete in keys_to_delete:
         game['chosen']['suitable-cards'].pop(key_to_delete)
-    collection.games.update_one({'_id': game['_id']}, {'$set': {'chosen': game['chosen']}})
+    mongo_games.update_one({'_id': game['_id']}, {'$set': {'chosen': game['chosen']}})
     return is_true
 
 
@@ -216,18 +216,19 @@ async def message_to_all(game: {}, player: {}, asked_player: {}, request: str = 
     message = f'Игра: <b>{game["title"]}</b> - <b>{player["name"]} -> {asked_player["name"]}</b> - ' \
               f'{change(game["chosen"]["card"])} - {request}'
 
-    for _player in collection.users.find({'_id': {'$in': game['players-ids']}}):
+    for _player in mongo_users.find({'_id': {'$in': game['players-ids']}}):
         if _player['_id'] == player['_id']:
-            m = message.replace(player["name"], 'Ты')
-        elif _player['_id'] == asked_player["_id"]:
-            m = message.replace(asked_player["name"], 'Ты')
+            await bot.send_message(_player['_id'], message.replace(player["name"], 'Ты'))
         else:
-            m = message
-        if _player['settings']['focus-mode']:
-            _player['settings']['focus-mode-message'] += m + '\n'
-            collection.users.update_one({'_id': _player['_id']}, {'$set': {'settings': _player['settings']}})
-        else:
-            await bot.send_message(_player['_id'], m)
+            if _player['_id'] == asked_player["_id"]:
+                m = message.replace(asked_player["name"], 'Ты')
+            else:
+                m = message
+            if _player['settings']['focus-mode']:
+                _player['settings']['focus-mode-message'] += m + '\n'
+                mongo_users.update_one({'_id': _player['_id']}, {'$set': {'settings': _player['settings']}})
+            else:
+                await bot.send_message(_player['_id'], m)
 
     with open('log.txt', 'a', encoding="utf-8") as file:
         file.write(message.replace('<b>', '') + '\n')
@@ -248,7 +249,7 @@ def delete_player_if_hands_empty(game: {}, player_id: int) -> bool:
         if len(game['cards'][str(player_id)][hand]) != 0:
             return False
     game['queue'].pop(game['queue'].index(player_id))
-    collection.games.update_one({'_id': game['_id']}, {'$set': {'queue': game['queue']}})
+    mongo_games.update_one({'_id': game['_id']}, {'$set': {'queue': game['queue']}})
     return True
 
 
@@ -262,19 +263,19 @@ def athanasius_check(game: {}, player_id: str) -> bool:
 
 def add_athanasius(game: {}, player_id: str):
     game['athanasias'][player_id].append(game['chosen']['card'])
-    collection.games.update_one({'_id': game['_id']}, {'$set': {'athanasias': game['athanasias']}})
+    mongo_games.update_one({'_id': game['_id']}, {'$set': {'athanasias': game['athanasias']}})
 
 
 def delete_cards(game: {}, player_id: str, card: str, hand_key: str):
     game['cards'][player_id][hand_key] = [_card for _card in game['cards'][player_id][hand_key] if card not in _card]
-    collection.games.update_one({'_id': game['_id']}, {'$set': {'cards': game['cards']}})
+    mongo_games.update_one({'_id': game['_id']}, {'$set': {'cards': game['cards']}})
 
 
 '''    CARD INFO    '''
 
 
 def get_card_info(game: {}, player_id: int, card: str) -> str:
-    user = collection.users.find_one({'_id': player_id})
+    user = mongo_users.find_one({'_id': player_id})
     cards = {}
     for hand in game['cards'][str(player_id)].keys():
         cards[hand] = [_card for _card in game['cards'][str(player_id)][hand] if card in _card]
@@ -362,7 +363,7 @@ async def end_message(game: {}):
 
     players = []
     for player_id in game['players-ids']:
-        player_name = collection.users.find_one({'_id': player_id})['name']
+        player_name = mongo_users.find_one({'_id': player_id})['name']
         players.append((player_id, player_name, len(game['athanasias'][str(player_id)])))
     players.sort(reverse=True, key=lambda x: x[2])
 
@@ -401,14 +402,14 @@ async def end_message(game: {}):
     for player in players:
         await bot.send_message(player[0], message, reply_markup=types.ReplyKeyboardRemove())
 
-    collection.games.update_one({'_id': game['_id']}, {'$set': {'active': False}})
+    mongo_games.update_one({'_id': game['_id']}, {'$set': {'active': False}})
 
 
 '''    MISC    '''
 
 
 def list_of_players(players_ids: []) -> str:
-    players = collection.users.find({'_id': {'$in': players_ids}})
+    players = mongo_users.find({'_id': {'$in': players_ids}})
     message_to_out = ''
     for player_index, player in enumerate(players, 1):
         message_to_out += f'\n<b>{player_index}. {player["name"]}</b>'

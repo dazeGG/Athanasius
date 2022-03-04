@@ -1,4 +1,4 @@
-from bot.config import collection
+from bot.config import mongo_users, mongo_games
 from aiogram import types
 import bot.scripts as sc
 
@@ -81,9 +81,9 @@ def leader_configuration_hands(game_id: int) -> types.InlineKeyboardMarkup:
 
 def leader_configuration_delete(player_id: int, game_id: int) -> types.InlineKeyboardMarkup:
     players_to_choose = []
-    for game_player_id in collection.games.find_one({'_id': game_id})['players-ids']:
+    for game_player_id in mongo_games.find_one({'_id': game_id})['players-ids']:
         if game_player_id != player_id:
-            player = collection.users.find_one({'_id': game_player_id})
+            player = mongo_users.find_one({'_id': game_player_id})
             players_to_choose.append(
                 types.InlineKeyboardButton(
                     text=f"{player['name']}",
@@ -144,10 +144,10 @@ def settings_cards_view() -> types.InlineKeyboardMarkup:
 
 
 def settings_room(player_id: int) -> types.InlineKeyboardMarkup:
-    user_games_ids = collection.users.find_one({'_id': player_id})['games']
+    user_games_ids = mongo_users.find_one({'_id': player_id})['mongo_games']
     games_titles = []
     for user_game_id in user_games_ids:
-        games_titles.append(collection.games.find_one({'_id': user_game_id})['title'])
+        games_titles.append(mongo_games.find_one({'_id': user_game_id})['title'])
     for i in range(len(user_games_ids)):
         user_games_ids[i] = 'settings_room_' + str(user_games_ids[i])
     keyboard = make_menu(games_titles, user_games_ids, 3)
@@ -169,7 +169,7 @@ def settings_applies_toggle() -> types.InlineKeyboardMarkup:
 
 def choose_player(player_id: int, game: {}) -> types.InlineKeyboardMarkup:
     players_to_choose = []
-    for player in collection.users.find({'_id': {'$ne': player_id}}):
+    for player in mongo_users.find({'_id': {'$ne': player_id}}):
         if player['_id'] in game['queue']:
             players_to_choose.append(
                 types.InlineKeyboardButton(

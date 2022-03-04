@@ -5,7 +5,7 @@ from aiogram.utils.exceptions import MessageNotModified, MessageToEditNotFound, 
 import bot.scripts as sc
 import bot.keyboards as k
 
-from bot.config import collection
+from bot.config import mongo_users, mongo_games
 
 
 def delete_chosen(game: {}):
@@ -14,7 +14,7 @@ def delete_chosen(game: {}):
     game['chosen']['count-red'] = 0
     game['chosen']['suits'] = {'Червы': 0, 'Буби': 0, 'Пики': 0, 'Крести': 0}
     game['chosen']['suitable-cards'] = {}
-    collection.games.update_one({'_id': game['_id']}, {'$set': {'chosen': game["chosen"]}})
+    mongo_games.update_one({'_id': game['_id']}, {'$set': {'chosen': game["chosen"]}})
 
 
 def get_p(player: {}) -> str:
@@ -36,15 +36,15 @@ def get_pccr(player: {}, chosen: {}) -> str:
 async def choose_player(call: types.CallbackQuery):
     data = call.data.split('_')
     game_id = int(data[1])
-    asked_user = collection.users.find_one({'_id': int(data[2])})
+    asked_user = mongo_users.find_one({'_id': int(data[2])})
 
-    game = collection.games.find_one({'_id': game_id})
+    game = mongo_games.find_one({'_id': game_id})
     game['chosen']['player-id'] = asked_user['_id']
 
-    collection.games.update_one({'_id': game_id}, {'$set': {'chosen': game['chosen']}})
+    mongo_games.update_one({'_id': game_id}, {'$set': {'chosen': game['chosen']}})
 
     await call.message.edit_text(
-        text=get_p(collection.users.find_one({'_id': asked_user['_id']})) + '\nКакую карту хочешь спросить?',
+        text=get_p(mongo_users.find_one({'_id': asked_user['_id']})) + '\nКакую карту хочешь спросить?',
         reply_markup=k.card_menu(game, call.message.chat.id, f'turnCard_{game_id}', with_back=True)
     )
 
@@ -54,9 +54,9 @@ async def choose_player(call: types.CallbackQuery):
 async def card(call: types.CallbackQuery):
     data = call.data.split('_')
     game_id = int(data[1])
-    game = collection.games.find_one({'_id': game_id})
-    user = collection.users.find_one({'_id': call.message.chat.id})
-    asked_user = collection.users.find_one({'_id': game['chosen']['player-id']})
+    game = mongo_games.find_one({'_id': game_id})
+    user = mongo_users.find_one({'_id': call.message.chat.id})
+    asked_user = mongo_users.find_one({'_id': game['chosen']['player-id']})
     match data[2]:
         case 'yes':
             pass
@@ -76,7 +76,7 @@ async def card(call: types.CallbackQuery):
             return
         case _:
             game['chosen']['card'] = data[2]
-            collection.games.update_one({'_id': game_id}, {'$set': {'chosen': game['chosen']}})
+            mongo_games.update_one({'_id': game_id}, {'$set': {'chosen': game['chosen']}})
             if user['settings']['applies']['card']:
                 await call.message.edit_text(
                     text=get_p(asked_user) + f'\nСпрашиваем {sc.change(data[2])}?',
@@ -108,9 +108,9 @@ async def card(call: types.CallbackQuery):
 async def cards_count(call: types.CallbackQuery):
     data = call.data.split('_')
     game_id = int(data[1])
-    game = collection.games.find_one({'_id': game_id})
-    user = collection.users.find_one({'_id': call.message.chat.id})
-    asked_user = collection.users.find_one({'_id': game['chosen']['player-id']})
+    game = mongo_games.find_one({'_id': game_id})
+    user = mongo_users.find_one({'_id': call.message.chat.id})
+    asked_user = mongo_users.find_one({'_id': game['chosen']['player-id']})
     match data[2]:
         case 'yes':
             pass
@@ -138,7 +138,7 @@ async def cards_count(call: types.CallbackQuery):
                     f'Количество: **{game["chosen"]["count"]}**',
                     reply_markup=k.make_counter(callback=f'cardsCount_{game_id}')
                 )
-                collection.games.update_one({'_id': game['_id']}, {'$set': {'chosen': game["chosen"]}})
+                mongo_games.update_one({'_id': game['_id']}, {'$set': {'chosen': game["chosen"]}})
             await call.answer()
             return
     if sc.find_cards(game, count=True):
@@ -168,9 +168,9 @@ async def cards_count(call: types.CallbackQuery):
 async def cards_red(call: types.CallbackQuery):
     data = call.data.split('_')
     game_id = int(data[1])
-    game = collection.games.find_one({'_id': game_id})
-    user = collection.users.find_one({'_id': call.message.chat.id})
-    asked_user = collection.users.find_one({'_id': game['chosen']['player-id']})
+    game = mongo_games.find_one({'_id': game_id})
+    user = mongo_users.find_one({'_id': call.message.chat.id})
+    asked_user = mongo_users.find_one({'_id': game['chosen']['player-id']})
     match data[2]:
         case 'yes':
             pass
@@ -198,7 +198,7 @@ async def cards_red(call: types.CallbackQuery):
                     f'Количество красных: **{game["chosen"]["count-red"]}**',
                     reply_markup=k.make_counter(callback=f'cardsRed_{game_id}')
                 )
-                collection.games.update_one({'_id': game['_id']}, {'$set': {'chosen': game['chosen']}})
+                mongo_games.update_one({'_id': game['_id']}, {'$set': {'chosen': game['chosen']}})
             await call.answer()
             return
     if sc.find_cards(game, count_red=True):
@@ -207,8 +207,8 @@ async def cards_red(call: types.CallbackQuery):
             for key in game["chosen"]["suitable-cards"].keys():
                 sc.delete_cards(game, str(asked_user['_id']), game['chosen']['card'], key)
                 break
-            collection.games.update_one({'_id': game['_id']}, {'$set': {'cards': game['cards']}})
-            game = collection.games.find_one({'_id': game_id})
+            mongo_games.update_one({'_id': game['_id']}, {'$set': {'cards': game['cards']}})
+            game = mongo_games.find_one({'_id': game_id})
             if sc.athanasius_check(game, str(user['_id'])):
                 await call.message.answer(
                     f'Поздравляю!\nНи у кого больше нет {sc.change(game["chosen"]["card"])}. Добавил тебе Афанасия.'
@@ -267,15 +267,15 @@ async def change_suits(game: {}, what_suit: str, what_to_do: str):
     delta = 1 if what_to_do == '+' else -1
     if game['chosen']['suits'][suit] + delta >= 0:
         game['chosen']['suits'][suit] += delta
-        collection.games.update_one({'_id': game['_id']}, {'$set': {'chosen': game['chosen']}})
+        mongo_games.update_one({'_id': game['_id']}, {'$set': {'chosen': game['chosen']}})
 
 
 async def suits(call: types.CallbackQuery):
     data = call.data.split('_')
     game_id = int(data[1])
-    game = collection.games.find_one({'_id': game_id})
-    user = collection.users.find_one({'_id': call.message.chat.id})
-    asked_user = collection.users.find_one({'_id': game['chosen']['player-id']})
+    game = mongo_games.find_one({'_id': game_id})
+    user = mongo_users.find_one({'_id': call.message.chat.id})
+    asked_user = mongo_users.find_one({'_id': game['chosen']['player-id']})
     match data[2]:
         case 'yes':
             pass
@@ -330,8 +330,8 @@ async def suits(call: types.CallbackQuery):
             asked_user,
             f'**Выкинул**. Они {sc.suits_to_emoji(game["chosen"]["suits"])}'
         )
-        collection.games.update_one({'_id': game['_id']}, {'$set': {'cards': game['cards']}})
-        game = collection.games.find_one({'_id': game_id})
+        mongo_games.update_one({'_id': game['_id']}, {'$set': {'cards': game['cards']}})
+        game = mongo_games.find_one({'_id': game_id})
         if sc.athanasius_check(game, str(user['_id'])):
             await call.message.answer(
                 f'Поздравляю!\nНи у кого больше нет {sc.change(game["chosen"]["card"])}. Добавил тебе Афанасия.'

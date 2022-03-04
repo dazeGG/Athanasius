@@ -5,7 +5,7 @@ from aiogram.dispatcher.filters import IDFilter, Text
 import bot.keyboards as k
 import bot.scripts as sc
 
-from bot.config import bot, collection
+from bot.config import bot, mongo_users, mongo_games
 
 
 async def start(message: types.Message, state: FSMContext):
@@ -24,20 +24,20 @@ async def admin_panel(message: types.Message):
 
 async def admin_focus_mode(call: types.CallbackQuery):
     data = call.data.split('_')
-    user = collection.users.find_one({'_id': call.message.chat.id})
+    user = mongo_users.find_one({'_id': call.message.chat.id})
     match data[1]:
         case 'vkl':
             user['settings']['focus-mode'] = True
         case 'vikl':
             user['settings']['focus-mode'] = False
-    collection.users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
+    mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
     await call.message.delete()
 
 
 async def cards_list(message: types.Message):
     await message.delete()
-    game = collection.games.find_one(
-        {'_id': collection.users.find_one({'_id': message.from_user.id})['settings']['chosen-room']})
+    game = mongo_games.find_one(
+        {'_id': mongo_users.find_one({'_id': message.from_user.id})['settings']['chosen-room']})
     if game['active']:
         player_cards = game['cards'][str(message.from_user.id)]
         for hand in player_cards.keys():
@@ -55,16 +55,16 @@ async def cards_list(message: types.Message):
 async def find_cards(call: types.CallbackQuery):
     data = call.data.split('_')
     game_id = int(data[1])
-    game = collection.games.find_one({'_id': game_id})
+    game = mongo_games.find_one({'_id': game_id})
     card = data[2]
     await call.message.edit_text(sc.get_card_info(game, call.message.chat.id, card))
 
 
 async def whose_turn(message: types.Message):
     await message.delete()
-    game = collection.games.find_one(
-        {'_id': collection.users.find_one({'_id': message.from_user.id})['settings']['chosen-room']})
-    user_whose_turn_name = collection.users.find_one({'_id': game['queue'][0]})['name']
+    game = mongo_games.find_one(
+        {'_id': mongo_users.find_one({'_id': message.from_user.id})['settings']['chosen-room']})
+    user_whose_turn_name = mongo_users.find_one({'_id': game['queue'][0]})['name']
     if game['active']:
         await message.answer(f'Ход игрока **{user_whose_turn_name}**')
     else:
@@ -73,8 +73,8 @@ async def whose_turn(message: types.Message):
 
 async def athanasias_list(message: types.Message):
     await message.delete()
-    game = collection.games.find_one(
-        {'_id': collection.users.find_one({'_id': message.from_user.id})['settings']['chosen-room']})
+    game = mongo_games.find_one(
+        {'_id': mongo_users.find_one({'_id': message.from_user.id})['settings']['chosen-room']})
     if game['active']:
         message_to_out = ''
         has_someone_athanasius = False
@@ -85,7 +85,7 @@ async def athanasias_list(message: types.Message):
 
         if has_someone_athanasius:
             for player_id in game['athanasias'].keys():
-                user_name = collection.users.find_one({'_id': int(player_id)})['name']
+                user_name = mongo_users.find_one({'_id': int(player_id)})['name']
                 message_to_out += f'**{user_name}'
                 for card in game['athanasias'][player_id]:
                     message_to_out += ' | ' + sc.change(card)
@@ -96,21 +96,21 @@ async def athanasias_list(message: types.Message):
 
 
 async def add_player(message: types.Message):
-    user = collection.users.find_one({'_id': message.from_user.id})
+    user = mongo_users.find_one({'_id': message.from_user.id})
     if user is None:
         await message.answer(f'Сначала зарегистрируйся.')
         return
-    for game in collection.games.find():
+    for game in mongo_games.find():
         if message.text == game['code-to-add']:
-            user['games'].append(game['_id'])
-            collection.users.update_one({'_id': user['_id']}, {'$set': {'games': user['games']}})
+            user['mongo_games'].append(game['_id'])
+            mongo_users.update_one({'_id': user['_id']}, {'$set': {'mongo_games': user['mongo_games']}})
 
             for player_id in game['players-ids']:
                 await bot.send_message(player_id, f'У нас новый игрок! Его зовут **{user["name"]}**.')
 
             game['players-ids'].append(message.from_user.id)
 
-            collection.games.update_one({'_id': game['_id']}, {'$set': {'players-ids': game['players-ids']}})
+            mongo_games.update_one({'_id': game['_id']}, {'$set': {'players-ids': game['players-ids']}})
 
             await message.answer(f'Успешно добавил тебя в игру **{game["title"]}**.')
             return

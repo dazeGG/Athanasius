@@ -13,3 +13,5 @@ bot = Bot(token=config.Athanasius_bot.token, parse_mode=ParseMode.MARKDOWN)
 dp = Dispatcher(bot=bot, storage=MemoryStorage())
 
 collection = MongoClient(config.Athanasius_bot.cluster_link)['athanasius']
+mongo_users = collection['mongo_users']
+mongo_games = collection['mongo_games']

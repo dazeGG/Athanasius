@@ -7,7 +7,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 import bot.scripts as sc
 import bot.keyboards as k
 
-from bot.config import bot, collection
+from bot.config import bot, mongo_users, mongo_games
 
 
 class GameName(StatesGroup):
@@ -27,8 +27,8 @@ async def change_text(call: types.CallbackQuery, new_text: str, reply_markup: ty
 
 
 async def start(message: types.Message):
-    playing_games_ids = collection.users.find_one({'_id': message.from_user.id})['games']
-    leader_games = [collection.games.find_one({'_id': game_id}) for game_id in playing_games_ids]
+    playing_games_ids = mongo_users.find_one({'_id': message.from_user.id})['mongo_games']
+    leader_games = [mongo_games.find_one({'_id': game_id}) for game_id in playing_games_ids]
     if len(leader_games) == 0:
         await message.answer('У тебя пока нет комнат. Хочешь создать?', reply_markup=k.leader_create())
     else:
@@ -48,10 +48,10 @@ async def start_menu(call: types.CallbackQuery):
 
 async def input_game_title(message: types.Message, state: FSMContext):
     game_id = sc.set_new_game_id()
-    games = collection.users.find_one({'_id': message.from_user.id})['games']
+    games = mongo_users.find_one({'_id': message.from_user.id})['mongo_games']
     games.append(game_id)
-    collection.users.update_one({'_id': message.from_user.id}, {'$set': {'games': games}})
-    collection.games.insert_one({
+    mongo_users.update_one({'_id': message.from_user.id}, {'$set': {'mongo_games': games}})
+    mongo_games.insert_one({
         '_id': game_id,
         'title': message.text,
         'active': False,
@@ -88,7 +88,7 @@ async def game(call: types.CallbackQuery):
     data = call.data.split('_')
 
     game_id = int(data[2])
-    _game = collection.games.find_one({'_id': game_id})
+    _game = mongo_games.find_one({'_id': game_id})
 
     match len(data):
         case 3:
@@ -96,8 +96,8 @@ async def game(call: types.CallbackQuery):
         case 4:
             match data[3]:
                 case 'back':
-                    playing_games_ids = collection.users.find_one({'_id': call.message.chat.id})['games']
-                    leader_games = [collection.games.find_one({'_id': game_id}) for game_id in playing_games_ids]
+                    playing_games_ids = mongo_users.find_one({'_id': call.message.chat.id})['mongo_games']
+                    leader_games = [mongo_games.find_one({'_id': game_id}) for game_id in playing_games_ids]
                     await change_text(call, 'Выбери комнату.', k.leader_choose_game(leader_games))
                 case 'start':
                     await call.message.delete()
@@ -105,8 +105,8 @@ async def game(call: types.CallbackQuery):
                     sc.card_distributor(_game)
                     sc.shuffle_players(_game)
 
-                    collection.games.update_one({'_id': game_id}, {'$set': {'active': True}})
-                    _game = collection.games.find_one({'_id': game_id})
+                    mongo_games.update_one({'_id': game_id}, {'$set': {'active': True}})
+                    _game = mongo_games.find_one({'_id': game_id})
 
                     settings = 'Выбранные настройки игры:\n\n' + sc.settings(_game)
 
@@ -123,14 +123,14 @@ async def game(call: types.CallbackQuery):
                     await change_text(call, 'ТОЧНО????', k.leader_end(game_id))
                 case 'delete':
                     for player_id in _game['players-ids']:
-                        player = collection.users.find_one({'_id': player_id})
-                        player['games'].pop(player['games'].index(_game['_id']))
+                        player = mongo_users.find_one({'_id': player_id})
+                        player['mongo_games'].pop(player['mongo_games'].index(_game['_id']))
                         player['settings']['chosen-room'] = 0
-                        collection.users.update_one(
+                        mongo_users.update_one(
                             {'_id': player['_id']},
-                            {'$set': {'games': player['games'], 'settings': player['settings']}}
+                            {'$set': {'mongo_games': player['mongo_games'], 'settings': player['settings']}}
                         )
-                    collection.games.delete_one({'_id': _game['_id']})
+                    mongo_games.delete_one({'_id': _game['_id']})
                     await call.message.edit_text(f'Успешно удалил комнату **{_game["title"]}**.')
     await call.answer()
 
@@ -138,34 +138,34 @@ async def game(call: types.CallbackQuery):
 def change_count(_game: {}, change: int):
     cfg = _game['config']
     cfg['count-of-decks'] += change
-    collection.games.update_one({'_id': _game['_id']}, {'$set': {'config': cfg}})
+    mongo_games.update_one({'_id': _game['_id']}, {'$set': {'config': cfg}})
 
 
 def change_hands(_game: {}, change: int):
     cfg = _game['config']
     cfg['count-of-hands'] = change
-    collection.games.update_one({'_id': _game['_id']}, {'$set': {'config': cfg}})
+    mongo_games.update_one({'_id': _game['_id']}, {'$set': {'config': cfg}})
 
 
 def change_type(_game: {}, change: int):
     cfg = _game['config']
     cfg['type-of-deck'] = change
-    collection.games.update_one({'_id': _game['_id']}, {'$set': {'config': cfg}})
+    mongo_games.update_one({'_id': _game['_id']}, {'$set': {'config': cfg}})
 
 
 def delete_player(_game: {}, player_id: int):
     _game['players-ids'].pop(_game['players-ids'].index(player_id))
-    collection.games.update_one({'_id': _game['_id']}, {'$set': {'players-ids': _game['players-ids']}})
-    user = collection.users.find_one({'_id': player_id})
-    user['games'].pop(user['games'].index(_game['_id']))
-    collection.users.update_one({'id': player_id}, {'$set': {'games': user['games']}})
+    mongo_games.update_one({'_id': _game['_id']}, {'$set': {'players-ids': _game['players-ids']}})
+    user = mongo_users.find_one({'_id': player_id})
+    user['mongo_games'].pop(user['mongo_games'].index(_game['_id']))
+    mongo_users.update_one({'id': player_id}, {'$set': {'mongo_games': user['mongo_games']}})
 
 
 async def game_configuration(call: types.CallbackQuery):
     data = call.data.split('_')
 
     game_id = int(data[2])
-    _game = collection.games.find_one({'_id': game_id})
+    _game = mongo_games.find_one({'_id': game_id})
 
     match len(data):
         case 3:
@@ -211,7 +211,7 @@ async def game_configuration(call: types.CallbackQuery):
                         )
                     case 'code':
                         _game['code-to-add'] = sc.generate_code_to_add()
-                        collection.games.update_one({'_id': game_id}, {'$set': {'code-to-add': _game['code-to-add']}})
+                        mongo_games.update_one({'_id': game_id}, {'$set': {'code-to-add': _game['code-to-add']}})
                         await change_text(call, f'**{_game["code-to-add"]}**', k.leader_configuration_add(game_id))
                     case 'type':
                         try:
@@ -228,7 +228,7 @@ async def end(call: types.CallbackQuery):
     data = call.data.split('_')
 
     game_id = int(data[2])
-    _game = collection.games.find_one({'_id': game_id})
+    _game = mongo_games.find_one({'_id': game_id})
 
     match data[3]:
         case 'yes':
@@ -239,7 +239,7 @@ async def end(call: types.CallbackQuery):
                     text='Игра преждевременно закончена.',
                     reply_markup=types.ReplyKeyboardRemove()
                 )
-            collection.games.update_one({'_id': _game['_id']}, {'$set': {'active': _game['active']}})
+            mongo_games.update_one({'_id': _game['_id']}, {'$set': {'active': _game['active']}})
             await call.message.delete()
             await call.message.answer('Ну хули, закругляемся)', reply_markup=types.ReplyKeyboardRemove())
         case 'no':

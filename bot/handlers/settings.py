@@ -6,7 +6,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 
 import bot.keyboards as k
 
-from bot.config import collection
+from bot.config import mongo_users, mongo_games
 
 
 class Name(StatesGroup):
@@ -14,7 +14,7 @@ class Name(StatesGroup):
 
 
 def get_applies(player_id: int, with_num: bool = False) -> str:
-    __applies = collection.users.find_one({'_id': player_id})['settings']['applies']
+    __applies = mongo_users.find_one({'_id': player_id})['settings']['applies']
     _applies = [__applies[apply] for apply in __applies.keys()]
     applies_list = 'Подтверждения:\n'
     for i, text in enumerate(['Карты', 'Количества карт', 'Количества красных карт', 'Мастей карт']):
@@ -45,26 +45,26 @@ def get_cards_view_with_example(player_id: int) -> str:
            '♦♣\n'\
            'Рука 2:\n'\
            '🔴: 1 ⚫: 2\n'\
-           f"♦♠♠\n\nТекущая настройка: **{collection.users.find_one({'_id': player_id})['settings']['card-view']}**"
+           f"♦♠♠\n\nТекущая настройка: **{mongo_users.find_one({'_id': player_id})['settings']['card-view']}**"
 
 
 def start_menu(player_id: int) -> str:
-    user = collection.users.find_one({'_id': player_id})
+    user = mongo_users.find_one({'_id': player_id})
     if user['settings']['chosen-room'] == 0:
         game_title = 'Ещё не выбрана'
     else:
-        game_title = collection.games.find_one({'_id': user['settings']['chosen-room']})['title']
+        game_title = mongo_games.find_one({'_id': user['settings']['chosen-room']})['title']
     return f'Тебя зовут **{user["name"]}**\n\n' \
            'Твои текущие настройки:\n\n' + get_applies(player_id=player_id)\
-           + f"\n\nВид карт: **{collection.users.find_one({'_id': player_id})['settings']['card-view']}**" \
+           + f"\n\nВид карт: **{mongo_users.find_one({'_id': player_id})['settings']['card-view']}**" \
              f'\nТекущая комната: **{game_title}**\n'\
            + '\nЧто будем менять?'
 
 
 async def update_applies_text(message: types.Message, change: str):
-    _settings = collection.users.find_one({'_id': message.chat.id})['settings']
+    _settings = mongo_users.find_one({'_id': message.chat.id})['settings']
     _settings['applies'][change] = not _settings['applies'][change]
-    collection.users.update_one({'_id': message.chat.id}, {'$set': {'settings': _settings}})
+    mongo_users.update_one({'_id': message.chat.id}, {'$set': {'settings': _settings}})
 
     await message.edit_text(
         get_applies(player_id=message.chat.id, with_num=True),
@@ -73,7 +73,7 @@ async def update_applies_text(message: types.Message, change: str):
 
 
 async def settings_start(message: types.Message):
-    if collection.users.find_one({'_id': message.from_user.id}) is None:
+    if mongo_users.find_one({'_id': message.from_user.id}) is None:
         await message.answer('Перед тем, как зайти в настройки, нажми /reg.')
         return
     await message.answer(start_menu(message.from_user.id), reply_markup=k.settings_menu())
@@ -105,10 +105,10 @@ async def settings(call: types.CallbackQuery):
                             else:
                                 await update_applies_text(call.message, data[3])
                     case 'onAll':
-                        _settings = collection.users.find_one({'_id': call.message.chat.id})['settings']
+                        _settings = mongo_users.find_one({'_id': call.message.chat.id})['settings']
                         for key in _settings['applies'].keys():
                             _settings['applies'][key] = True
-                        collection.users.update_one({'_id': call.message.chat.id}, {'$set': {'settings': _settings}})
+                        mongo_users.update_one({'_id': call.message.chat.id}, {'$set': {'settings': _settings}})
                         try:
                             await call.message.edit_text(
                                 get_applies(call.message.chat.id),
@@ -117,10 +117,10 @@ async def settings(call: types.CallbackQuery):
                         except MessageNotModified:
                             pass
                     case 'offAll':
-                        _settings = collection.users.find_one({'_id': call.message.chat.id})['settings']
+                        _settings = mongo_users.find_one({'_id': call.message.chat.id})['settings']
                         for key in _settings['applies'].keys():
                             _settings['applies'][key] = False
-                        collection.users.update_one({'_id': call.message.chat.id}, {'$set': {'settings': _settings}})
+                        mongo_users.update_one({'_id': call.message.chat.id}, {'$set': {'settings': _settings}})
                         try:
                             await call.message.edit_text(
                                 get_applies(call.message.chat.id),
@@ -139,9 +139,9 @@ async def settings(call: types.CallbackQuery):
             else:
                 match data[2]:
                     case 'text':
-                        _settings = collection.users.find_one({'_id': call.message.chat.id})['settings']
+                        _settings = mongo_users.find_one({'_id': call.message.chat.id})['settings']
                         _settings['card_view'] = 'text'
-                        collection.users.update_one({'_id': call.message.chat.id}, {'$set': {'settings': _settings}})
+                        mongo_users.update_one({'_id': call.message.chat.id}, {'$set': {'settings': _settings}})
                         try:
                             await call.message.edit_text(
                                 get_cards_view_with_example(call.message.chat.id),
@@ -150,9 +150,9 @@ async def settings(call: types.CallbackQuery):
                         except MessageNotModified:
                             pass
                     case 'emoji':
-                        _settings = collection.users.find_one({'_id': call.message.chat.id})['settings']
+                        _settings = mongo_users.find_one({'_id': call.message.chat.id})['settings']
                         _settings['card_view'] = 'emoji'
-                        collection.users.update_one({'_id': call.message.chat.id}, {'$set': {'settings': _settings}})
+                        mongo_users.update_one({'_id': call.message.chat.id}, {'$set': {'settings': _settings}})
                         try:
                             await call.message.edit_text(
                                 get_cards_view_with_example(call.message.chat.id),
@@ -168,9 +168,9 @@ async def settings(call: types.CallbackQuery):
                     case 'back':
                         await call.message.edit_text(start_menu(call.message.chat.id), reply_markup=k.settings_menu())
                     case _:
-                        user = collection.users.find_one({'_id': call.message.chat.id})
+                        user = mongo_users.find_one({'_id': call.message.chat.id})
                         user['settings']['chosen-room'] = int(data[2])
-                        collection.users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
+                        mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
                         await call.message.edit_text(start_menu(call.message.chat.id), reply_markup=k.settings_menu())
             except IndexError:
                 await call.message.edit_text('Выбери комнату.', reply_markup=k.settings_room(call.message.chat.id))
@@ -180,7 +180,7 @@ async def settings(call: types.CallbackQuery):
 
 
 async def input_new_name(message: types.Message, state: FSMContext):
-    user = collection.users.find_one({'_id': message.from_user.id})
+    user = mongo_users.find_one({'_id': message.from_user.id})
     if len(message.text) > 16:
         await message.answer(f"Введи другое имя, максимальная длина имени 16 символов.")
         return
@@ -189,12 +189,12 @@ async def input_new_name(message: types.Message, state: FSMContext):
         await message.answer(f"Тебя уже так зовут, придумай что-нибудь пооригинальнее.")
         return
 
-    if collection.users.find_one({'name': message.text}) is not None:
+    if mongo_users.find_one({'name': message.text}) is not None:
         await message.answer(f"Введи другое имя, имя **{message.text}** уже занято")
         return
 
     user['name'] = message.text
-    collection.users.update_one({'_id': user['_id']}, {'$set': {'name': user['name']}})
+    mongo_users.update_one({'_id': user['_id']}, {'$set': {'name': user['name']}})
     await message.answer(f'Успешно сменил твоё имя, теперь тебя зовут **{message.text}**')
     await state.finish()
 
