@@ -85,6 +85,7 @@ async def input_game_title(message: types.Message, state: FSMContext):
                 'Крести': 0,
             },
             'suitable-cards': {},
+            'notes': {},
         },
     })
     await message.answer('Успешно создал комнату. Нажми /rooms чтобы посмотреть список своих комнат.')
@@ -251,14 +252,13 @@ async def end(call: types.CallbackQuery):
 
     match data[3]:
         case 'yes':
-            room['active'] = False
             for player_id in room['players-ids'][1:]:
                 await bot.send_message(
                     player_id,
                     text='Игра преждевременно закончена.',
                     reply_markup=types.ReplyKeyboardRemove()
                 )
-            mongo_games.update_one({'_id': room['_id']}, {'$set': {'active': room['active']}})
+            sc.cleaning_the_room(room)
             await call.message.delete()
             await call.message.answer('Ну хули, закругляемся)', reply_markup=types.ReplyKeyboardRemove())
         case 'no':

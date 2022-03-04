@@ -258,6 +258,28 @@ def apply_suits(game_id: int) -> types.InlineKeyboardMarkup:
     )
 
 
+'''    NOTES    '''
+
+
+def notes_card_choose(game: {}) -> types.InlineKeyboardMarkup:
+    cards = []
+    match game['config']['type-of-deck']:
+        case 36:
+            for card in '6789XJQKA':
+                cards.append(card)
+        case 52:
+            for card in '23456789XJQKA':
+                cards.append(card)
+        case 54:
+            for card in '23456789XJQKAW':
+                cards.append(card)
+    buttons = []
+    for card in cards:
+        buttons.append(types.InlineKeyboardButton(text=sc.change(card), callback_data=f'notes_{game["_id"]}_{card}'))
+    return types.InlineKeyboardMarkup().add(*buttons).add(
+        types.InlineKeyboardButton(text='Выбрать другую карту', callback_data=f'notes_{game["_id"]}_another'))
+
+
 '''    MENU CONSTRUCTOR    '''
 
 

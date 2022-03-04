@@ -99,6 +99,20 @@ async def athanasias_list(message: types.Message):
                              'Возможно ты не выбрал комнату в настройках, <b>обязательно</b> проверь.')
 
 
+async def notes(message: types.Message):
+    await message.delete()
+    game = mongo_games.find_one(
+        {'_id': mongo_users.find_one({'_id': message.from_user.id})['settings']['chosen-room']})
+    await message.answer('Выбери карту к которой добавить заметки', reply_markup=k.notes_card_choose(game))
+
+
+async def notes_card(call: types.CallbackQuery):
+    data = call.data.split('_')
+    user = mongo_users.find_one({'_id': call.message.chat.id})
+    game_id = int(data[1])
+    game = mongo_games.find_one({'_id': game_id})
+
+
 async def add_player(message: types.Message):
     user = mongo_users.find_one({'_id': message.from_user.id})
     if user is None:
@@ -128,4 +142,6 @@ def register_handlers_common(dp: Dispatcher, admin_ids: list):
     dp.register_callback_query_handler(find_cards, Text(startswith='myCards'))
     dp.register_message_handler(whose_turn, text="Чей ход")
     dp.register_message_handler(athanasias_list, text="Афанасии")
+    dp.register_message_handler(notes, IDFilter(user_id=admin_ids), text="Заметки")
+    dp.register_callback_query_handler(notes_card, Text(startswith='notes_'))
     dp.register_message_handler(add_player)
