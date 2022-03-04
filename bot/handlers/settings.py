@@ -178,6 +178,15 @@ async def settings(call: types.CallbackQuery):
                 await call.message.edit_text('Выбери комнату.', reply_markup=k.settings_room(call.message.chat.id))
         case 'focusMode':
             user = mongo_users.find_one({'_id': call.message.chat.id})
+            turns = ''
+            if user['settings']['focus-mode']:
+                for room_title in user['settings']['focus-mode-messages'].keys():
+                    turns += f'Игра: <b>{room_title}</b>\n\n{user["settings"]["focus-mode-messages"][room_title]}\n\n'
+                keys_to_delete = [key for key in user['settings']['focus-mode-messages'].keys()]
+                for key in keys_to_delete:
+                    user["settings"]["focus-mode-messages"].pop(key)
+            if len(turns) != 0:
+                await call.message.answer(turns)
             user['settings']['focus-mode'] = not user['settings']['focus-mode']
             mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
             await call.message.edit_text(start_menu(call.message.chat.id), reply_markup=k.settings_menu())

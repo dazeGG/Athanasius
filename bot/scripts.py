@@ -135,7 +135,7 @@ async def turn(game: {}):
         if user['settings']['focus-mode']:
             await bot.send_message(game['queue'][0], f'Игра: <b>{game["title"]}</b>\n\n'
                                    + user['settings']['focus-mode-messages'][game['title']])
-            user['settings']['focus-mode-messages'][game['title']] = ''
+            user['settings']['focus-mode-messages'].pop(game['title'])
             mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
     except KeyError:
         pass
