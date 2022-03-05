@@ -256,8 +256,10 @@ async def message_to_all(game: {}, player: {}, asked_player: {}, request: str = 
                 m = f'Игра: <b>{game["title"]}</b> - ' + m
                 await bot.send_message(_player['_id'], m)
 
+    '''
     with open('log.txt', 'a', encoding="utf-8") as file:
         file.write(message.replace('<b>', '').replace('</b>', '') + '\n')
+    '''
 
 
 def unique_owner(game: {}, card: str, player_id: str) -> bool:
