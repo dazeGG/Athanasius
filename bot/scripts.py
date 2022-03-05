@@ -463,7 +463,7 @@ def list_of_players(players_ids: []) -> str:
 
 
 def suits_to_emoji(suits: {}) -> str:
-    return suits['Червы'] * '♥️' + suits['Буби'] * '♦️' + suits['Пики'] * '♠️' + suits['Крести'] * '♣️'
+    return suits['Червы'] * '♥' + suits['Буби'] * '♦' + suits['Пики'] * '♠' + suits['Крести'] * '♣'
 
 
 def jokers(count: int, count_red: int) -> str:
