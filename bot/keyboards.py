@@ -7,18 +7,6 @@ def default_menu() -> types.ReplyKeyboardMarkup:
     return types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2).add(*['Чей ход', 'Афанасии', 'Мои карты'])
 
 
-def players_names_for_notes(room: {}, player_id: int) -> types.ReplyKeyboardMarkup:
-    buttons = []
-    for _player_id in room['players-ids']:
-        if _player_id != player_id:
-            if room['config']['count-of-hands'] == 1:
-                buttons.append(sc.name_by_id(_player_id))
-            else:
-                for hand in range(room['config']['count-of-hands']):
-                    buttons.append(f'{sc.name_by_id(_player_id)} {hand + 1}')
-    return types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2).add(*buttons)
-
-
 def admin_focus_mode() -> types.InlineKeyboardMarkup:
     return make_menu(
         ['Вкл', 'Выкл'],
@@ -302,6 +290,22 @@ def notes(room: {}, player_id: int, card: str) -> types.InlineKeyboardMarkup:
             ))
     return types.InlineKeyboardMarkup(row_width=4).add(*buttons).add(
         types.InlineKeyboardButton(text='Назад', callback_data=f'notes_{room["_id"]}_back'))
+
+
+def suits_to_notes() -> types.ReplyKeyboardMarkup:
+    return types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=4).add(*['♥', '♦', '♠', '♣'])
+
+
+def players_names_for_notes(room: {}, player_id: int) -> types.ReplyKeyboardMarkup:
+    buttons = []
+    for _player_id in room['players-ids']:
+        if _player_id != player_id:
+            if room['config']['count-of-hands'] == 1:
+                buttons.append(sc.name_by_id(_player_id))
+            else:
+                for hand in range(room['config']['count-of-hands']):
+                    buttons.append(f'{sc.name_by_id(_player_id)} {hand + 1}')
+    return types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2).add(*buttons)
 
 
 '''    MENU CONSTRUCTOR    '''

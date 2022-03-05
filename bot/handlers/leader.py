@@ -145,7 +145,7 @@ async def game(call: types.CallbackQuery):
                 case 'delete':
                     for player_id in room['players-ids']:
                         player = mongo_users.find_one({'_id': player_id})
-                        player['mongo_games'].pop(player['games'].index(room['_id']))
+                        player['games'].pop(player['games'].index(room['_id']))
                         player['settings']['chosen-room'] = 0
                         mongo_users.update_one(
                             {'_id': player['_id']},

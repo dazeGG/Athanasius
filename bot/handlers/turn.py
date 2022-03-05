@@ -48,8 +48,6 @@ async def choose_player(call: types.CallbackQuery):
         reply_markup=k.card_menu(game, call.message.chat.id, f'turnCard_{game_id}', with_back=True)
     )
 
-    await call.answer()
-
 
 async def card(call: types.CallbackQuery):
     data = call.data.split('_')

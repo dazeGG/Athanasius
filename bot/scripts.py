@@ -41,11 +41,11 @@ def make_notes(room: {}):
     for player_id in room['players-ids']:
         d[str(player_id)] = {}
         for card in cards:
-            d[str(player_id)][card] = []
+            d[str(player_id)][card] = [['♥', '♦', '♠', '♣']]
             for j in range(room['config']['count-of-decks']):
                 d[str(player_id)][card].append([])
                 for k in range(4):
-                    d[str(player_id)][card][j].append('-')
+                    d[str(player_id)][card][j + 1].append('-')
     mongo_games.update_one({'_id': room['_id']}, {'$set': {'notes': d}})
 
 

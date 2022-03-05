@@ -106,9 +106,12 @@ async def athanasias_list(message: types.Message):
 
 async def notes(message: types.Message):
     await message.delete()
-    game = mongo_games.find_one(
-        {'_id': mongo_users.find_one({'_id': message.from_user.id})['settings']['chosen-room']})
-    await message.answer('Выбери карту к которой добавить заметки', reply_markup=k.notes_card_choose(game))
+    try:
+        room = mongo_games.find_one(
+            {'_id': mongo_users.find_one({'_id': message.from_user.id})['settings']['chosen-room']})
+        await message.answer(f'Игра: <b>{room["title"]}</b>', reply_markup=k.notes_card_choose(room))
+    except TypeError:
+        await message.answer('Не могу найти игру.')
 
 
 async def notes_card(call: types.CallbackQuery):
@@ -121,20 +124,26 @@ async def notes_card(call: types.CallbackQuery):
             match data[2]:
                 case 'back':
                     await call.message.edit_text(
-                        text='Выбери карту к которой добавить заметки',
+                        text=f'Игра: <b>{room["title"]}</b>',
                         reply_markup=k.notes_card_choose(room)
                     )
                 case _:
                     await call.message.edit_text(
-                        text=f'Карта: {sc.change(data[2])}',
+                        text=f'Игра: <b>{room["title"]} |</b> Карта: {sc.change(data[2])}',
                         reply_markup=k.notes(room, call.message.chat.id, data[2])
                     )
         case 5:
             await call.message.delete()
-            await call.message.answer(
-                text='Напиши мне, что туда вписать.',
-                reply_markup=k.players_names_for_notes(room, call.message.chat.id)
-            )
+            if int(data[3]) == 0:
+                await call.message.answer(
+                    text='Выбери масть, которая будет там стоять.',
+                    reply_markup=k.suits_to_notes()
+                )
+            else:
+                await call.message.answer(
+                    text='Напиши мне, что туда вписать.',
+                    reply_markup=k.players_names_for_notes(room, call.message.chat.id)
+                )
             mongo_users.update_one({'_id': user['_id']}, {'$set': {
                 'note': [room_id, data[2], int(data[3]), int(data[4])]}})
             await Note.input_note.set()
@@ -147,8 +156,14 @@ async def input_note(message: types.Message, state: FSMContext):
     room = mongo_games.find_one({'_id': room_id})
     room['notes'][str(message.from_user.id)][card][i][j] = message.text
     mongo_games.update_one({'_id': room['_id']}, {'$set': {'notes': room['notes']}})
-    await message.answer('Успешно добавил заметку!', reply_markup=k.default_menu())
-    await message.answer(f'Карта: {sc.change(card)}', reply_markup=k.notes(room, message.from_user.id, card))
+    if i == 0:
+        await message.answer('Успешно изменил масть!', reply_markup=k.default_menu())
+    else:
+        await message.answer('Успешно добавил заметку!', reply_markup=k.default_menu())
+    await message.answer(
+        text=f'Игра: <b>{room["title"]} |</b> Карта: {sc.change(card)}',
+        reply_markup=k.notes(room, message.from_user.id, card)
+    )
     await state.finish()
 
 
@@ -181,7 +196,7 @@ def register_handlers_common(dp: Dispatcher, admin_ids: list):
     dp.register_callback_query_handler(find_cards, Text(startswith='myCards'))
     dp.register_message_handler(whose_turn, text="Чей ход")
     dp.register_message_handler(athanasias_list, text="Афанасии")
-    dp.register_message_handler(notes, IDFilter(user_id=admin_ids), text="Заметки")
+    dp.register_message_handler(notes, text="Заметки")
     dp.register_callback_query_handler(notes_card, Text(startswith='notes_'))
     dp.register_message_handler(input_note, state=Note.input_note)
     dp.register_message_handler(add_player)
