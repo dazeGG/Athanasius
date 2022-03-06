@@ -47,6 +47,7 @@ async def choose_player(call: types.CallbackQuery):
         text=get_p(mongo_users.find_one({'_id': asked_user['_id']})) + '\nКакую карту хочешь спросить?',
         reply_markup=k.card_menu(game, call.message.chat.id, f'turnCard_{game_id}', with_back=True)
     )
+    await call.answer()
 
 
 async def card(call: types.CallbackQuery):

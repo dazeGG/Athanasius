@@ -2,6 +2,7 @@ from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import IDFilter, Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.utils.exceptions import MessageNotModified
 
 import bot.keyboards as k
 import bot.scripts as sc
@@ -128,10 +129,13 @@ async def notes_card(call: types.CallbackQuery):
                         reply_markup=k.notes_card_choose(room)
                     )
                 case _:
-                    await call.message.edit_text(
-                        text=f'Игра: <b>{room["title"]} |</b> Карта: {sc.change(data[2])}',
-                        reply_markup=k.notes(room, call.message.chat.id, data[2])
-                    )
+                    try:
+                        await call.message.edit_text(
+                            text=f'Игра: <b>{room["title"]} |</b> Карта: {sc.change(data[2])}',
+                            reply_markup=k.notes(room, call.message.chat.id, data[2])
+                        )
+                    except MessageNotModified:
+                        pass
         case 5:
             await call.message.delete()
             if int(data[3]) == 0:
