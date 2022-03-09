@@ -261,9 +261,9 @@ def apply_suits(game_id: int) -> types.InlineKeyboardMarkup:
 '''    NOTES    '''
 
 
-def notes_card_choose(game: {}) -> types.InlineKeyboardMarkup:
+def notes_card_choose(room: {}) -> types.InlineKeyboardMarkup:
     cards = []
-    match game['config']['type-of-deck']:
+    match room['config']['type-of-deck']:
         case 36:
             for card in '6789XJQKA':
                 cards.append(card)
@@ -275,7 +275,7 @@ def notes_card_choose(game: {}) -> types.InlineKeyboardMarkup:
                 cards.append(card)
     buttons = []
     for card in cards:
-        buttons.append(types.InlineKeyboardButton(text=sc.change(card), callback_data=f'notes_{game["_id"]}_{card}'))
+        buttons.append(types.InlineKeyboardButton(text=sc.change(card), callback_data=f'notes_{room["_id"]}_{card}'))
     return types.InlineKeyboardMarkup().add(*buttons)
 
 
@@ -292,20 +292,24 @@ def notes(room: {}, player_id: int, card: str) -> types.InlineKeyboardMarkup:
         types.InlineKeyboardButton(text='Назад', callback_data=f'notes_{room["_id"]}_back'))
 
 
-def suits_to_notes() -> types.ReplyKeyboardMarkup:
-    return types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=4).add(*['♥', '♦', '♠', '♣'])
+def suits_to_notes() -> types.InlineKeyboardMarkup:
+    return make_menu(['♥', '♦', '♠', '♣'], [f'notes_' + i for i in '♥♦♠♣'], 4)
 
 
-def players_names_for_notes(room: {}, player_id: int) -> types.ReplyKeyboardMarkup:
+def players_names_for_notes(room: {}, player_id: int) -> types.InlineKeyboardMarkup:
     buttons = []
     for _player_id in room['players-ids']:
+        text = sc.name_by_id(_player_id)
         if _player_id != player_id:
-            if room['config']['count-of-hands'] == 1:
-                buttons.append(sc.name_by_id(_player_id))
-            else:
+            if room['config']['count-of-hands'] != 1:
                 for hand in range(room['config']['count-of-hands']):
-                    buttons.append(f'{sc.name_by_id(_player_id)} {hand + 1}')
-    return types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2).add(*buttons)
+                    text = f'{sc.name_by_id(_player_id)} {hand + 1}'
+                    buttons.append(types.InlineKeyboardButton(text=text, callback_data=f'notes_{text}'))
+            else:
+                buttons.append(types.InlineKeyboardButton(text=text, callback_data=f'notes_{text}'))
+    buttons.append(types.InlineKeyboardButton(text='я', callback_data='notes_я'))
+    buttons.append(types.InlineKeyboardButton(text='-', callback_data='notes_-'))
+    return types.InlineKeyboardMarkup(row_width=2).add(*buttons)
 
 
 '''    MENU CONSTRUCTOR    '''

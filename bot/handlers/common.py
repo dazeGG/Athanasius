@@ -1,17 +1,12 @@
 from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import IDFilter, Text
-from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.utils.exceptions import MessageNotModified
 
 import bot.keyboards as k
 import bot.scripts as sc
 
 from bot.config import bot, mongo_users, mongo_games
-
-
-class Note(StatesGroup):
-    input_note = State()
 
 
 async def start(message: types.Message, state: FSMContext):
@@ -117,7 +112,19 @@ async def notes(message: types.Message):
 
 async def notes_card(call: types.CallbackQuery):
     data = call.data.split('_')
-    room_id = int(data[1])
+    try:
+        room_id = int(data[1])
+    except ValueError:
+        user = mongo_users.find_one({'_id': call.message.chat.id})
+        room_id, card, i, j = user['note'][0], user['note'][1], user['note'][2], user['note'][3]
+        room = mongo_games.find_one({'_id': room_id})
+        mongo_users.update_one({'_id': user['_id']}, {'$unset': {'note': ''}})
+        room['notes'][str(call.message.chat.id)][card][i][j] = data[1]
+        mongo_games.update_one({'_id': room['_id']}, {'$set': {'notes': room['notes']}})
+        await call.message.edit_text(
+            text=f'Игра: <b>{room["title"]} |</b> Карта: {sc.change(card)}',
+            reply_markup=k.notes(room, call.message.chat.id, card)
+        )
     user = mongo_users.find_one({'_id': call.message.chat.id})
     room = mongo_games.find_one({'_id': room_id})
     match len(data):
@@ -137,20 +144,19 @@ async def notes_card(call: types.CallbackQuery):
                     except MessageNotModified:
                         pass
         case 5:
-            await call.message.delete()
             if int(data[3]) == 0:
-                await call.message.answer(
-                    text='Выбери масть, которая будет там стоять.',
+                await call.message.edit_text(
+                    text=f'Игра: <b>{room["title"]} |</b> Карта: {sc.change(data[2])}',
                     reply_markup=k.suits_to_notes()
                 )
             else:
-                await call.message.answer(
-                    text='Напиши мне, что туда вписать.',
+                await call.message.edit_text(
+                    text=f'Игра: <b>{room["title"]} |</b> Карта: {sc.change(data[2])}',
                     reply_markup=k.players_names_for_notes(room, call.message.chat.id)
                 )
             mongo_users.update_one({'_id': user['_id']}, {'$set': {
                 'note': [room_id, data[2], int(data[3]), int(data[4])]}})
-            await Note.input_note.set()
+            await call.answer()
 
 
 async def input_note(message: types.Message, state: FSMContext):
@@ -202,5 +208,4 @@ def register_handlers_common(dp: Dispatcher, admin_ids: list):
     dp.register_message_handler(athanasias_list, text="Афанасии")
     dp.register_message_handler(notes, text="Заметки")
     dp.register_callback_query_handler(notes_card, Text(startswith='notes_'))
-    dp.register_message_handler(input_note, state=Note.input_note)
     dp.register_message_handler(add_player)
