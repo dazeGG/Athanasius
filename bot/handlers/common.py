@@ -121,10 +121,13 @@ async def notes_card(call: types.CallbackQuery):
         mongo_users.update_one({'_id': user['_id']}, {'$unset': {'note': ''}})
         room['notes'][str(call.message.chat.id)][card][i][j] = data[1]
         mongo_games.update_one({'_id': room['_id']}, {'$set': {'notes': room['notes']}})
-        await call.message.edit_text(
-            text=f'Игра: <b>{room["title"]} |</b> Карта: {sc.change(card)}',
-            reply_markup=k.notes(room, call.message.chat.id, card)
-        )
+        try:
+            await call.message.edit_text(
+                text=f'Игра: <b>{room["title"]} |</b> Карта: {sc.change(card)}',
+                reply_markup=k.notes(room, call.message.chat.id, card)
+            )
+        except MessageNotModified:
+            pass
     user = mongo_users.find_one({'_id': call.message.chat.id})
     room = mongo_games.find_one({'_id': room_id})
     match len(data):
