@@ -1,3 +1,5 @@
+import codecs
+
 from aiogram import types
 from random import shuffle, randint
 
@@ -567,6 +569,14 @@ def change(str_or_emoji: str) -> str:
             return 'W'
         case _:
             return 'ERROR'
+
+
+def get_rules(game: bool = True) -> str:
+    if game:
+        rules = ''
+        with codecs.open("rules/game.txt", "r", "utf_8_sig") as rules_file:
+            rules += rules_file.read()
+            return rules
 
 
 def get_right_athanasius(count: int) -> str:
