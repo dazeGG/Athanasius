@@ -1,10 +1,12 @@
 from aiogram import Dispatcher, types
 
-import bot.keyboards as k
 import bot.scripts as sc
+# import bot.keyboards as k
 
-from bot.config import bot, mongo_users, mongo_games
+
+async def rules_start(message: types.Message):
+    await message.answer(sc.get_rules())
 
 
 def register_handlers_rules(dp: Dispatcher):
-    dp.register_message_handler(start, commands="rules")
+    dp.register_message_handler(rules_start, commands="rules")

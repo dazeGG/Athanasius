@@ -572,11 +572,11 @@ def change(str_or_emoji: str) -> str:
 
 
 def get_rules(game: bool = True) -> str:
-    if game:
-        rules = ''
-        with codecs.open("rules/game.txt", "r", "utf_8_sig") as rules_file:
-            rules += rules_file.read()
-            return rules
+    file = 'rules/game.txt' if game else 'rules/bot.txt'
+    rules = ''
+    with codecs.open(file, 'r', 'utf_8_sig') as rules_file:
+        rules += rules_file.read()
+        return rules
 
 
 def get_right_athanasius(count: int) -> str:
