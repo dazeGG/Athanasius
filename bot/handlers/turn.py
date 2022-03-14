@@ -365,7 +365,7 @@ async def suits(call: types.CallbackQuery):
     await call.answer()
 
 
-def register_main_loop_handlers(dp: Dispatcher):
+def register_handlers_turn(dp: Dispatcher):
     dp.register_callback_query_handler(choose_player, Text(startswith="ask_"))
     dp.register_callback_query_handler(card, Text(startswith="turnCard"))
     dp.register_callback_query_handler(cards_count, Text(startswith="cardsCount"))
