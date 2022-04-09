@@ -15,6 +15,7 @@ def delete_chosen(game: {}):
     game['chosen']['suits'] = {'Червы': 0, 'Буби': 0, 'Пики': 0, 'Крести': 0}
     game['chosen']['suitable-cards'] = {}
     mongo_games.update_one({'_id': game['_id']}, {'$set': {'chosen': game["chosen"]}})
+    
 
 
 def get_p(player: {}) -> str:
