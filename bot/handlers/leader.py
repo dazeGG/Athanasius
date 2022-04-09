@@ -256,12 +256,11 @@ async def end(call: types.CallbackQuery):
             for player_id in room['players-ids'][1:]:
                 await bot.send_message(
                     player_id,
-                    text='Игра преждевременно закончена.',
-                    reply_markup=types.ReplyKeyboardRemove()
+                    text='Игра преждевременно закончена.'
                 )
             sc.cleaning_the_room(room)
             await call.message.delete()
-            await call.message.answer('Ну хули, закругляемся)', reply_markup=types.ReplyKeyboardRemove())
+            await call.message.answer('Ну хули, закругляемся)')
         case 'no':
             await call.message.edit_text('Ну хули, играем дальше')
 
