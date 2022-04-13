@@ -37,27 +37,6 @@ def generate_code_to_add() -> str:
 '''    LEADER SCRIPTS   '''
 
 
-def make_notes(room: {}):
-    cards = ''
-    match room['config']['type-of-deck']:
-        case 36:
-            cards += '6789XJQKA'
-        case 52:
-            cards += '23456789XJQKA'
-        case 54:
-            cards += '23456789XJQKAW'
-    d = {}
-    for player_id in room['players-ids']:
-        d[str(player_id)] = {}
-        for card in cards:
-            d[str(player_id)][card] = [['♥', '♦', '♠', '♣']]
-            for j in range(room['config']['count-of-decks']):
-                d[str(player_id)][card].append([])
-                for k in range(4):
-                    d[str(player_id)][card][j + 1].append('-')
-    mongo_games.update_one({'_id': room['_id']}, {'$set': {'notes': d}})
-
-
 async def athanasius_early_check(room: {}):
     cards = ['6', '7', '8', '9', 'X', 'J', 'Q', 'K', 'A']
 
@@ -168,6 +147,27 @@ async def turn(room: {}):
         pass
     message = 'Твой ход!\nУ кого спросим карты?'
     await bot.send_message(room['queue'][0], message, reply_markup=choose_player(room['queue'][0], room))
+
+
+def make_notes(room: {}):
+    cards = ''
+    match room['config']['type-of-deck']:
+        case 36:
+            cards += '6789XJQKA'
+        case 52:
+            cards += '23456789XJQKA'
+        case 54:
+            cards += '23456789XJQKAW'
+    d = {}
+    for player_id in room['players-ids']:
+        d[str(player_id)] = {}
+        for card in cards:
+            d[str(player_id)][card] = [['♥', '♦', '♠', '♣']]
+            for j in range(room['config']['count-of-decks']):
+                d[str(player_id)][card].append([])
+                for k in range(4):
+                    d[str(player_id)][card][j + 1].append('-')
+    mongo_games.update_one({'_id': room['_id']}, {'$set': {'notes': d}})
 
 
 def get_focus_mode_message(user: {}, room: {}) -> str:
@@ -451,12 +451,15 @@ def name_by_id(player_id: int) -> str:
     return mongo_users.find_one({'_id': player_id})['name']
 
 
-def cleaning_the_room(room: {}):
+async def cleaning_the_room(room: {}):
     room['chosen']['card'] = ''
     room['chosen']['count'] = 1
     room['chosen']['count-red'] = 0
     room['chosen']['suits'] = {'Червы': 0, 'Буби': 0, 'Пики': 0, 'Крести': 0}
     room['chosen']['suitable-cards'] = {}
+
+    for player_id in room['players-ids']:
+        await cleaning_the_focus_mode_message(player_id, room)
 
     mongo_games.update_one({'_id': room['_id']}, {'$set': {
         'chosen': room['chosen'],
@@ -467,8 +470,8 @@ def cleaning_the_room(room: {}):
     }})
 
 
-def cleaning_the_focus_mode_message(player_id):
-    player = get_player_by_id(player_id)
+async def cleaning_the_focus_mode_message(player_id: int, room: {}):
+    await bot.send_message(player_id, get_focus_mode_message(get_player_by_id(player_id), room))
 
 
 def list_of_players(players_ids: []) -> str:

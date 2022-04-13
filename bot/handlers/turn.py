@@ -211,7 +211,7 @@ async def cards_red(call: types.CallbackQuery):
             await sc.message_to_all(room, user, asked_user,
                                     f'<b>Выкинул</b>. Они {sc.jokers(room["chosen"]["count"], room["chosen"]["count-red"])}')
             if sc.end_check(room):
-                sc.cleaning_the_room(room)
+                await sc.cleaning_the_room(room)
                 await sc.end_message(room)
                 await call.answer()
                 return
@@ -321,7 +321,7 @@ async def suits(call: types.CallbackQuery):
             )
             sc.add_athanasius(room, str(user['_id']))
         if sc.end_check(room):
-            sc.cleaning_the_room(room)
+            await sc.cleaning_the_room(room)
             await sc.end_message(room)
             await call.answer()
             return
