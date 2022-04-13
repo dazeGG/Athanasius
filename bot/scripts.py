@@ -156,14 +156,18 @@ async def turn(game: {}):
     try:
         user = mongo_users.find_one({'_id': game['queue'][0]})
         if user['settings']['focus-mode']:
-            await bot.send_message(game['queue'][0], f'Игра: <b>{game["title"]}</b>\n\n'
-                                   + user['settings']['focus-mode-messages'][game['title']])
-            user['settings']['focus-mode-messages'].pop(game['title'])
-            mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
+            await bot.send_message(game['queue'][0], get_focus_mode_message(user, game))
     except KeyError:
         pass
     message = 'Твой ход!\nУ кого спросим карты?'
     await bot.send_message(game['queue'][0], message, reply_markup=choose_player(game['queue'][0], game))
+
+
+def get_focus_mode_message(user: {}, game: {}) -> str:
+    message = f'Игра: <b>{game["title"]}</b>\n\n' + user['settings']['focus-mode-messages'][game['title']]
+    user['settings']['focus-mode-messages'].pop(game['title'])
+    mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
+    return message
 
 
 def player_available_cards(game: {}, player_id: int) -> tuple:
@@ -454,6 +458,14 @@ def cleaning_the_room(room: {}):
         'cards': {},
         'athanasias': {},
     }})
+
+
+get_player_by_id = lambda player_id: mongo_users.find({'_id': player_id})
+
+
+def cleaning_the_focus_mode_message(player_id):
+    player = get_player_by_id(player_id)
+
 
 
 def list_of_players(players_ids: []) -> str:
