@@ -153,12 +153,7 @@ async def cards_count(call: types.CallbackQuery):
             await call.message.edit_text(
                 'Не смог удалить это сообщение, поэтому ты видишь этот текст.\n'
                 'Не пугайся, ничего не сломалось, просто ты ходил больше дня)')
-        await sc.message_to_all(
-            game,
-            user,
-            asked_user,
-            f'Их не <b>{game["chosen"]["count"]}</b>.'
-        )
+        await sc.message_to_all(game, user, asked_user, f'Их не <b>{game["chosen"]["count"]}</b>.')
         sc.change_player(game)
         await sc.turn(game)
         delete_chosen(game)
@@ -213,12 +208,8 @@ async def cards_red(call: types.CallbackQuery):
                     f'Поздравляю!\nНи у кого больше нет {sc.change(room["chosen"]["card"])}. Добавил тебе Афанасия.'
                 )
                 sc.add_athanasius(room, str(user['_id']))
-            await sc.message_to_all(
-                room,
-                user,
-                asked_user,
-                f'<b>Выкинул</b>. Они {sc.jokers(room["chosen"]["count"], room["chosen"]["count-red"])}'
-            )
+            await sc.message_to_all(room, user, asked_user,
+                                    f'<b>Выкинул</b>. Они {sc.jokers(room["chosen"]["count"], room["chosen"]["count-red"])}')
             if sc.end_check(room):
                 sc.cleaning_the_room(room)
                 await sc.end_message(room)
@@ -242,12 +233,8 @@ async def cards_red(call: types.CallbackQuery):
             await call.message.edit_text(
                 'Не смог удалить это сообщение, поэтому ты видишь этот текст.\n'
                 'Не пугайся, ничего не сломалось, просто ты ходил больше дня)')
-        await sc.message_to_all(
-            room,
-            user,
-            asked_user,
-            f'Их <b>{room["chosen"]["count"]}</b>, красных не <b>{room["chosen"]["count-red"]}</b>.'
-        )
+        await sc.message_to_all(room, user, asked_user,
+                                f'Их <b>{room["chosen"]["count"]}</b>, красных не <b>{room["chosen"]["count-red"]}</b>.')
         sc.change_player(room)
         delete_chosen(room)
         await sc.turn(room)
@@ -324,12 +311,8 @@ async def suits(call: types.CallbackQuery):
         for key in room["chosen"]["suitable-cards"].keys():
             sc.delete_cards(room, str(asked_user['_id']), room['chosen']['card'], key)
             break
-        await sc.message_to_all(
-            room,
-            user,
-            asked_user,
-            f'<b>Выкинул</b>. Они {sc.suits_to_emoji(room["chosen"]["suits"])}'
-        )
+        await sc.message_to_all(room, user, asked_user,
+                                f'<b>Выкинул</b>. Они {sc.suits_to_emoji(room["chosen"]["suits"])}')
         mongo_games.update_one({'_id': room['_id']}, {'$set': {'cards': room['cards']}})
         room = mongo_games.find_one({'_id': room_id})
         if sc.athanasius_check(room, str(user['_id'])):
@@ -346,13 +329,9 @@ async def suits(call: types.CallbackQuery):
             sc.change_player(room)
         sc.delete_player_if_hands_empty(room, asked_user['_id'])
     else:
-        await sc.message_to_all(
-            room,
-            user,
-            asked_user,
-            f'Их <b>{room["chosen"]["count"]}</b>, красных <b>{room["chosen"]["count-red"]}</b>. '
-            f'Они не {sc.suits_to_emoji(room["chosen"]["suits"])}'
-        )
+        await sc.message_to_all(room, user, asked_user,
+                                f'Их <b>{room["chosen"]["count"]}</b>, красных <b>{room["chosen"]["count-red"]}</b>. '
+                                f'Они не {sc.suits_to_emoji(room["chosen"]["suits"])}')
         try:
             await call.message.delete()
         except MessageCantBeDeleted:

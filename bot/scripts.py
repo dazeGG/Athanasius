@@ -6,7 +6,11 @@ from random import shuffle, randint
 from bot.keyboards import choose_player
 from bot.config import bot, mongo_users, mongo_games
 
-'''    LEADER SCRIPTS   '''
+
+get_player_by_id = lambda player_id: mongo_users.find({'_id': player_id})
+
+
+'''    ROOM SETTINGS SCRIPTS   '''
 
 
 def set_new_game_id() -> int:
@@ -17,7 +21,7 @@ def set_new_game_id() -> int:
 
 
 def generate_part_of_code_to_add() -> str:
-    alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    alphabet = 'ABCEHKMOPTXY0123456789'
     alphabet_len = len(alphabet)
     return ''.join([alphabet[randint(0, alphabet_len - 1)] for _ in range(5)])
 
@@ -28,6 +32,9 @@ def generate_code_to_add() -> str:
         if mongo_games.find_one({'code-to-add': code}) is None:
             break
     return code
+
+
+'''    LEADER SCRIPTS   '''
 
 
 def make_notes(room: {}):
@@ -51,23 +58,23 @@ def make_notes(room: {}):
     mongo_games.update_one({'_id': room['_id']}, {'$set': {'notes': d}})
 
 
-async def athanasius_early_check(game: {}):
+async def athanasius_early_check(room: {}):
     cards = ['6', '7', '8', '9', 'X', 'J', 'Q', 'K', 'A']
 
-    if game['config']['type-of-deck'] == 52 or game['config']['type-of-deck'] == 54:
+    if room['config']['type-of-deck'] == 52 or room['config']['type-of-deck'] == 54:
         for _card in '2345':
             cards.append(_card)
-        if game['config']['type-of-deck'] == 54:
+        if room['config']['type-of-deck'] == 54:
             cards.append('W')
 
     all_found_athanasias = []
 
-    for player_id in game['cards'].keys():
+    for player_id in room['cards'].keys():
         athanasias = []
         for card in cards:
-            if unique_owner(game, card, player_id) and card not in all_found_athanasias:
-                for hand in game['cards'][player_id].keys():
-                    delete_cards(game, player_id, card, hand)
+            if unique_owner(room, card, player_id) and card not in all_found_athanasias:
+                for hand in room['cards'][player_id].keys():
+                    delete_cards(room, player_id, card, hand)
                 athanasias.append(card)
                 all_found_athanasias.append(card)
         if len(athanasias) != 0:
@@ -83,18 +90,18 @@ async def athanasius_early_check(game: {}):
                     'Поздравляю! У тебя с самого начала есть несколько Афанасиев. '
                     'Посмотреть их можно, нажав на кнопку Афанасии'
                 )
-            game['athanasias'][player_id] = athanasias
+            room['athanasias'][player_id] = athanasias
         mongo_games.update_one(
-            {'_id': game['_id']},
-            {'$set': {'athanasias': game['athanasias'], 'cards': game['cards']}}
+            {'_id': room['_id']},
+            {'$set': {'athanasias': room['athanasias'], 'cards': room['cards']}}
         )
 
 
-def card_distributor(game: {}):
-    players_ids = [player_id for player_id in map(str, game['players-ids'])]
+def card_distributor(room: {}):
+    players_ids = [player_id for player_id in map(str, room['players-ids'])]
 
-    count_of_decks = game['config']['count-of-decks']
-    count_of_hands = game['config']['count-of-hands']
+    count_of_decks = room['config']['count-of-decks']
+    count_of_hands = room['config']['count-of-hands']
 
     deck = []
 
@@ -102,11 +109,11 @@ def card_distributor(game: {}):
         for suit in 'ЧБПК':
             deck.append(value + suit)
 
-    if game['config']['type-of-deck'] == 52 or game['config']['type-of-deck'] == 54:
+    if room['config']['type-of-deck'] == 52 or room['config']['type-of-deck'] == 54:
         for value in '2345':
             for suit in 'ЧБПК':
                 deck.append(value + suit)
-        if game['config']['type-of-deck'] == 54:
+        if room['config']['type-of-deck'] == 54:
             for suit in 'ЧК':
                 deck.append('W' + suit)
 
@@ -140,41 +147,41 @@ def card_distributor(game: {}):
         for number_of_hand in range(count_of_hands):
             players_decks[player_id][f'hand-{number_of_hand + 1}'].sort()
 
-    mongo_games.update_one({'_id': game['_id']}, {'$set': {'cards': players_decks, 'athanasias': athanasias}})
+    mongo_games.update_one({'_id': room['_id']}, {'$set': {'cards': players_decks, 'athanasias': athanasias}})
 
 
-def shuffle_players(game: {}):
-    queue = game['players-ids']
+def shuffle_players(room: {}):
+    queue = room['players-ids']
     shuffle(queue)
-    mongo_games.update_one({'_id': game['_id']}, {'$set': {'queue': queue}})
+    mongo_games.update_one({'_id': room['_id']}, {'$set': {'queue': queue}})
 
 
 '''    IN GAME SCRIPTS    '''
 
 
-async def turn(game: {}):
+async def turn(room: {}):
     try:
-        user = mongo_users.find_one({'_id': game['queue'][0]})
+        user = mongo_users.find_one({'_id': room['queue'][0]})
         if user['settings']['focus-mode']:
-            await bot.send_message(game['queue'][0], get_focus_mode_message(user, game))
+            await bot.send_message(room['queue'][0], get_focus_mode_message(user, room))
     except KeyError:
         pass
     message = 'Твой ход!\nУ кого спросим карты?'
-    await bot.send_message(game['queue'][0], message, reply_markup=choose_player(game['queue'][0], game))
+    await bot.send_message(room['queue'][0], message, reply_markup=choose_player(room['queue'][0], room))
 
 
-def get_focus_mode_message(user: {}, game: {}) -> str:
-    message = f'Игра: <b>{game["title"]}</b>\n\n' + user['settings']['focus-mode-messages'][game['title']]
-    user['settings']['focus-mode-messages'].pop(game['title'])
+def get_focus_mode_message(user: {}, room: {}) -> str:
+    message = f'Игра: <b>{room["title"]}</b>\n\n' + user['settings']['focus-mode-messages'][room['title']]
+    user['settings']['focus-mode-messages'].pop(room['title'])
     mongo_users.update_one({'_id': user['_id']}, {'$set': {'settings': user['settings']}})
     return message
 
 
-def player_available_cards(game: {}, player_id: int) -> tuple:
+def player_available_cards(room: {}, player_id: int) -> tuple:
     available_cards = {'nums': [], 'letters': []}
     for value in ['2', '3', '4', '5', '6', '7', '8', '9', 'X', 'J', 'Q', 'K', 'A', 'W']:
-        for hand in game['cards'][str(player_id)].keys():
-            for card in game['cards'][str(player_id)][hand]:
+        for hand in room['cards'][str(player_id)].keys():
+            for card in room['cards'][str(player_id)][hand]:
                 if value in card and value not in available_cards['nums'] and (value.isdigit() or value == 'X'):
                     available_cards['nums'].append(value)
                 if value in card and value not in available_cards['letters'] and not (value.isdigit() or value == 'X'):
@@ -182,48 +189,48 @@ def player_available_cards(game: {}, player_id: int) -> tuple:
     return available_cards['nums'], available_cards['letters']
 
 
-def change_player(game: {}):
-    game['queue'].append(game['queue'].pop(0))
-    mongo_games.update_one({'_id': game['_id']}, {'$set': {'queue': game['queue']}})
+def change_player(room: {}):
+    room['queue'].append(room['queue'].pop(0))
+    mongo_games.update_one({'_id': room['_id']}, {'$set': {'queue': room['queue']}})
 
 
-def find_cards(game: {}, card: bool = False, count: bool = False, count_red: bool = False, suits: bool = False) -> bool:
+def find_cards(room: {}, card: bool = False, count: bool = False, count_red: bool = False, suits: bool = False) -> bool:
     is_true = False
     keys_to_delete = []
     if card:
-        for hand in game['cards'][str(game['chosen']['player-id'])].keys():
-            game['chosen']['suitable-cards'][hand] = []
-            for card in game['cards'][str(game['chosen']['player-id'])][hand]:
-                if game['chosen']['card'] in card:
+        for hand in room['cards'][str(room['chosen']['player-id'])].keys():
+            room['chosen']['suitable-cards'][hand] = []
+            for card in room['cards'][str(room['chosen']['player-id'])][hand]:
+                if room['chosen']['card'] in card:
                     is_true = True
-                    game['chosen']['suitable-cards'][hand].append(card)
-            if len(game['chosen']['suitable-cards'][hand]) == 0:
-                game['chosen']['suitable-cards'].pop(hand)
+                    room['chosen']['suitable-cards'][hand].append(card)
+            if len(room['chosen']['suitable-cards'][hand]) == 0:
+                room['chosen']['suitable-cards'].pop(hand)
     elif count:
-        for hand in game['chosen']['suitable-cards'].keys():
-            if len(game['chosen']['suitable-cards'][hand]) == game['chosen']['count']:
+        for hand in room['chosen']['suitable-cards'].keys():
+            if len(room['chosen']['suitable-cards'][hand]) == room['chosen']['count']:
                 is_true = True
             else:
                 keys_to_delete.append(hand)
     elif count_red:
-        for hand in game['chosen']['suitable-cards'].keys():
+        for hand in room['chosen']['suitable-cards'].keys():
             count_of_red = 0
-            if game['chosen']['card'] == 'W':
-                for card in game['chosen']['suitable-cards'][hand]:
+            if room['chosen']['card'] == 'W':
+                for card in room['chosen']['suitable-cards'][hand]:
                     if 'К' in card:
                         count_of_red += 1
             else:
-                for card in game['chosen']['suitable-cards'][hand]:
+                for card in room['chosen']['suitable-cards'][hand]:
                     if 'Ч' in card or 'Б' in card:
                         count_of_red += 1
-            if count_of_red == game['chosen']['count-red']:
+            if count_of_red == room['chosen']['count-red']:
                 is_true = True
             else:
                 keys_to_delete.append(hand)
     elif suits:
-        for hand in game['chosen']['suitable-cards'].keys():
+        for hand in room['chosen']['suitable-cards'].keys():
             counter = {'Червы': 0, 'Буби': 0, 'Пики': 0, 'Крести': 0}
-            for card in game['chosen']['suitable-cards'][hand]:
+            for card in room['chosen']['suitable-cards'][hand]:
                 if 'Ч' in card:
                     counter['Червы'] += 1
                 elif 'Б' in card:
@@ -232,22 +239,22 @@ def find_cards(game: {}, card: bool = False, count: bool = False, count_red: boo
                     counter['Пики'] += 1
                 elif 'К' in card:
                     counter['Крести'] += 1
-            if counter == game['chosen']['suits']:
+            if counter == room['chosen']['suits']:
                 is_true = True
             else:
                 keys_to_delete.append(hand)
     for key_to_delete in keys_to_delete:
-        game['chosen']['suitable-cards'].pop(key_to_delete)
-    mongo_games.update_one({'_id': game['_id']}, {'$set': {'chosen': game['chosen']}})
+        room['chosen']['suitable-cards'].pop(key_to_delete)
+    mongo_games.update_one({'_id': room['_id']}, {'$set': {'chosen': room['chosen']}})
     return is_true
 
 
-async def message_to_all(game: {}, player: {}, asked_player: {}, request: str = ''):
-    message = f'<b>{player["name"]} -> {asked_player["name"]}</b> - {change(game["chosen"]["card"])} - {request}'
+async def message_to_all(room: {}, player: {}, asked_player: {}, request: str = ''):
+    message = f'<b>{player["name"]} -> {asked_player["name"]}</b> - {change(room["chosen"]["card"])} - {request}'
 
-    for _player in mongo_users.find({'_id': {'$in': game['players-ids']}}):
+    for _player in mongo_users.find({'_id': {'$in': room['players-ids']}}):
         if _player['_id'] == player['_id']:
-            m = f'Игра: <b>{game["title"]}</b> - ' + message.replace(player["name"], 'Ты')
+            m = f'Игра: <b>{room["title"]}</b> - ' + message.replace(player["name"], 'Ты')
             await bot.send_message(_player['_id'], m)
         else:
             if _player['_id'] == asked_player["_id"]:
@@ -255,11 +262,11 @@ async def message_to_all(game: {}, player: {}, asked_player: {}, request: str = 
             else:
                 m = message
             if _player['settings']['focus-mode']:
-                _player['settings']['focus-mode-messages'][game["title"]] = \
-                    _player['settings']['focus-mode-messages'].get(game["title"], '') + m + '\n'
+                _player['settings']['focus-mode-messages'][room["title"]] = \
+                    _player['settings']['focus-mode-messages'].get(room["title"], '') + m + '\n'
                 mongo_users.update_one({'_id': _player['_id']}, {'$set': {'settings': _player['settings']}})
             else:
-                m = f'Игра: <b>{game["title"]}</b> - ' + m
+                m = f'Игра: <b>{room["title"]}</b> - ' + m
                 await bot.send_message(_player['_id'], m)
 
     '''
@@ -268,51 +275,51 @@ async def message_to_all(game: {}, player: {}, asked_player: {}, request: str = 
     '''
 
 
-def unique_owner(game: {}, card: str, player_id: str) -> bool:
-    for _player_id in game['cards'].keys():
+def unique_owner(room: {}, card: str, player_id: str) -> bool:
+    for _player_id in room['cards'].keys():
         if _player_id != player_id:
-            for hand in game['cards'][_player_id].keys():
-                for _card in game['cards'][_player_id][hand]:
+            for hand in room['cards'][_player_id].keys():
+                for _card in room['cards'][_player_id][hand]:
                     if card in _card:
                         return False
     return True
 
 
-def delete_player_if_hands_empty(game: {}, player_id: int) -> bool:
-    for hand in game['cards'][str(player_id)].keys():
-        if len(game['cards'][str(player_id)][hand]) != 0:
+def delete_player_if_hands_empty(room: {}, player_id: int) -> bool:
+    for hand in room['cards'][str(player_id)].keys():
+        if len(room['cards'][str(player_id)][hand]) != 0:
             return False
-    game['queue'].pop(game['queue'].index(player_id))
-    mongo_games.update_one({'_id': game['_id']}, {'$set': {'queue': game['queue']}})
+    room['queue'].pop(room['queue'].index(player_id))
+    mongo_games.update_one({'_id': room['_id']}, {'$set': {'queue': room['queue']}})
     return True
 
 
-def athanasius_check(game: {}, player_id: str) -> bool:
-    if unique_owner(game, game['chosen']['card'], player_id):
-        for hand in game['cards'][player_id].keys():
-            delete_cards(game, player_id, game['chosen']['card'], hand)
+def athanasius_check(room: {}, player_id: str) -> bool:
+    if unique_owner(room, room['chosen']['card'], player_id):
+        for hand in room['cards'][player_id].keys():
+            delete_cards(room, player_id, room['chosen']['card'], hand)
         return True
     return False
 
 
-def add_athanasius(game: {}, player_id: str):
-    game['athanasias'][player_id].append(game['chosen']['card'])
-    mongo_games.update_one({'_id': game['_id']}, {'$set': {'athanasias': game['athanasias']}})
+def add_athanasius(room: {}, player_id: str):
+    room['athanasias'][player_id].append(room['chosen']['card'])
+    mongo_games.update_one({'_id': room['_id']}, {'$set': {'athanasias': room['athanasias']}})
 
 
-def delete_cards(game: {}, player_id: str, card: str, hand_key: str):
-    game['cards'][player_id][hand_key] = [_card for _card in game['cards'][player_id][hand_key] if card not in _card]
-    mongo_games.update_one({'_id': game['_id']}, {'$set': {'cards': game['cards']}})
+def delete_cards(room: {}, player_id: str, card: str, hand_key: str):
+    room['cards'][player_id][hand_key] = [_card for _card in room['cards'][player_id][hand_key] if card not in _card]
+    mongo_games.update_one({'_id': room['_id']}, {'$set': {'cards': room['cards']}})
 
 
 '''    CARD INFO    '''
 
 
-def get_card_info(game: {}, player_id: int, card: str) -> str:
+def get_card_info(room: {}, player_id: int, card: str) -> str:
     user = mongo_users.find_one({'_id': player_id})
     cards = {}
-    for hand in game['cards'][str(player_id)].keys():
-        cards[hand] = [_card for _card in game['cards'][str(player_id)][hand] if card in _card]
+    for hand in room['cards'][str(player_id)].keys():
+        cards[hand] = [_card for _card in room['cards'][str(player_id)][hand] if card in _card]
 
     if card != 'W':
         categories = ['Количество', 'Красные', 'Червы', 'Буби', 'Чёрные', 'Пики', 'Крести']
@@ -384,21 +391,21 @@ def get_card_info(game: {}, player_id: int, card: str) -> str:
 '''    ENDING SCRIPTS    '''
 
 
-def end_check(game: {}) -> bool:
-    for player_id in game['cards']:
-        for hand in game['cards'][player_id]:
-            if len(game['cards'][player_id][hand]) != 0:
+def end_check(room: {}) -> bool:
+    for player_id in room['cards']:
+        for hand in room['cards'][player_id]:
+            if len(room['cards'][player_id][hand]) != 0:
                 return False
     return True
 
 
-async def end_message(game: {}):
+async def end_message(room: {}):
     message = 'Игра закончилась!\n\nВот они, победители, слева на право:\n'
 
     players = []
-    for player_id in game['players-ids']:
+    for player_id in room['players-ids']:
         player_name = mongo_users.find_one({'_id': player_id})['name']
-        players.append((player_id, player_name, len(game['athanasias'][str(player_id)])))
+        players.append((player_id, player_name, len(room['athanasias'][str(player_id)])))
     players.sort(reverse=True, key=lambda x: x[2])
 
     medal_owners = 0
@@ -460,12 +467,8 @@ def cleaning_the_room(room: {}):
     }})
 
 
-get_player_by_id = lambda player_id: mongo_users.find({'_id': player_id})
-
-
 def cleaning_the_focus_mode_message(player_id):
     player = get_player_by_id(player_id)
-
 
 
 def list_of_players(players_ids: []) -> str:
@@ -484,8 +487,8 @@ def jokers(count: int, count_red: int) -> str:
     return change('Красные') * count_red + change('Чёрные') * (count - count_red)
 
 
-def settings(game: {}) -> str:
-    cfg = game['config']
+def settings(room: {}) -> str:
+    cfg = room['config']
 
     match cfg['type-of-deck']:
         case 36:
@@ -496,7 +499,7 @@ def settings(game: {}) -> str:
             type_of_deck = 'Колода с джокерами(<b>54</b> карты)'
 
     return 'Список игроков:\n' \
-           + list_of_players(game["players-ids"]) + f'\n\nЧисло колод: <b>{cfg["count-of-decks"]}</b>\n' \
+           + list_of_players(room["players-ids"]) + f'\n\nЧисло колод: <b>{cfg["count-of-decks"]}</b>\n' \
                                                     f'Число рук: <b>{cfg["count-of-hands"]}</b>\n' \
                                                     f'Тип колоды: {type_of_deck}'
 
@@ -583,8 +586,8 @@ def change(str_or_emoji: str) -> str:
             return 'ERROR'
 
 
-def get_rules(game: bool = True) -> str:
-    file = 'rules/game.txt' if game else 'rules/bot.txt'
+def get_rules(room: bool = True) -> str:
+    file = 'rules/game.txt' if room else 'rules/bot.txt'
     rules = ''
     with codecs.open(file, 'r', 'utf_8_sig') as rules_file:
         rules += rules_file.read()
